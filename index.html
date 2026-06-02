@@ -448,20 +448,14 @@
         let inventory = JSON.parse(localStorage.getItem('secsell_inventory'));
         function saveInventory() { localStorage.setItem('secsell_inventory', JSON.stringify(inventory)); }
 
-        if (users.length === 0 && adminEmails.length === 0) {
-            localStorage.removeItem('secsell_admin_emails');
-            adminEmails = [];
-        }
-
         function isOwner() {
             if (!currentUser) return false;
             if (adminEmails.length === 0) return true;
             return adminEmails[0] === currentUser.email;
         }
-
         function isAdmin() {
             if (!currentUser) return false;
-            if (isOwner()) return true;
+            if (adminEmails.length === 0) return true;
             return adminEmails.includes(currentUser.email);
         }
 
@@ -663,17 +657,17 @@
         const settingsModal = document.getElementById('settingsModal');
         function openSettingsModal() {
             document.getElementById('settingsDisplayName').value = currentUser?.username || '';
-            document.getElementById('adminManageSection').style.display = isOwner() ? 'block' : 'none';
-            if(isOwner()) renderAdminList();
+            const isOwnerUser = isOwner();
+            document.getElementById('adminManageSection').style.display = isOwnerUser ? 'block' : 'none';
+            if(isOwnerUser) renderAdminList();
             settingsModal.style.display = 'flex';
         }
         function renderAdminList() {
             const container = document.getElementById('adminList');
             if(!container) return;
             container.innerHTML = '';
-            const ownerEmail = adminEmails[0] || null;
-            const otherAdmins = adminEmails.filter(e => e !== ownerEmail);
-            otherAdmins.forEach(email => {
+            const nonOwnerAdmins = adminEmails.filter(e => e !== adminEmails[0]);
+            nonOwnerAdmins.forEach(email => {
                 const user = users.find(u=>u.email===email);
                 const div = document.createElement('div'); div.className = 'admin-user-item';
                 div.innerHTML = `<span>${escapeHtml(email)} (${user?.username || '?'})</span><button class="removeAdminBtn" data-email="${email}" style="background:#aa2e4e; border:none; padding:4px 10px; border-radius:20px;">Remove</button>`;
@@ -739,7 +733,7 @@
                 if(user) {
                     currentUser = user;
                     localStorage.setItem('secsell_current_user', JSON.stringify(user));
-                    if (adminEmails.length === 0 && users.length === 1) {
+                    if (adminEmails.length === 0) {
                         adminEmails.push(currentUser.email);
                         localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
                     }
@@ -755,17 +749,17 @@
                     updateAnnouncementBar();
                     setInterval(updateAnnouncementBar, 60000);
                     updateAdminBadge();
-                } else { document.getElementById('authError').innerText = 'Invalid credentials'; }
+                } else {
+                    document.getElementById('authError').innerText = 'Invalid credentials';
+                }
             } else {
                 if(!username) { document.getElementById('authError').innerText = 'Username required'; return; }
                 if(register(email, username, password)) {
-                    if (users.length === 1 && adminEmails.length === 0) {
-                        adminEmails.push(email);
-                        localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
-                    }
                     document.getElementById('authError').innerText = 'Registered! Please login.';
                     toggleAuthMode();
-                } else { document.getElementById('authError').innerText = 'Email already exists'; }
+                } else {
+                    document.getElementById('authError').innerText = 'Email already exists';
+                }
             }
         }
         document.getElementById('authSubmitBtn')?.addEventListener('click', handleAuth);
@@ -773,6 +767,10 @@
         const savedUser = localStorage.getItem('secsell_current_user');
         if(savedUser) {
             currentUser = JSON.parse(savedUser);
+            if (adminEmails.length === 0) {
+                adminEmails.push(currentUser.email);
+                localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+            }
             authContainer.style.display = 'none';
             appDiv.style.display = 'block';
             const isUserAdmin = isAdmin();
@@ -785,7 +783,10 @@
             updateAnnouncementBar();
             setInterval(updateAnnouncementBar, 60000);
             updateAdminBadge();
-        } else { authContainer.style.display = 'flex'; appDiv.style.display = 'none'; }
+        } else {
+            authContainer.style.display = 'flex';
+            appDiv.style.display = 'none';
+        }
 
         function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     })();
