@@ -153,7 +153,7 @@
         .btn-accent:hover { transform: translateY(-3px); box-shadow: 0 12px 22px rgba(0,0,0,0.4); }
         .accounts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 1.5rem;
             margin: 2rem 0;
         }
@@ -187,6 +187,19 @@
             border-radius: 20px;
             margin-top: 0.3rem;
             font-weight: bold;
+        }
+        .stock-badge {
+            font-size: 0.75rem;
+            background: #2a5280;
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            margin-top: 0.4rem;
+            color: #aaf0ff;
+        }
+        .low-stock {
+            background: #aa2e4e;
+            color: white;
         }
         .edit-price-icon {
             position: absolute;
@@ -256,7 +269,7 @@
         .order-table th, .order-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #4a4280; }
         .announcement-item-admin { background: #0f1130; padding: 1rem; border-radius: 1rem; margin-bottom: 1rem; }
         .admin-user-item { background: #0f1130; padding: 0.5rem; border-radius: 1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
-        @media (max-width: 780px) { .hero h1 { font-size: 1.8rem; } .accounts-grid { grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); } }
+        @media (max-width: 780px) { .hero h1 { font-size: 1.8rem; } .accounts-grid { grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); } }
     </style>
 </head>
 <body>
@@ -384,11 +397,12 @@
 </div>
 
 <div id="editOfferModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; justify-content:center; align-items:center;">
-    <div style="background:#1a1d45; padding:2rem; border-radius:2rem; width:340px;">
-        <h3>Edit Sale for <span id="editMilDisplay"></span>M</h3>
+    <div style="background:#1a1d45; padding:2rem; border-radius:2rem; width:380px;">
+        <h3>Edit Package <span id="editMilDisplay"></span>M</h3>
         <input type="number" id="editSalePrice" placeholder="Sale price (€)">
         <input type="text" id="editSaleDesc" placeholder="Short description (e.g. 'Flash Sale')">
         <input type="datetime-local" id="editEndDate">
+        <input type="number" id="editStock" placeholder="Available accounts (stock)">
         <div style="display:flex; gap:1rem; margin-top:1rem;"><button id="saveOfferEdit" class="btn">Save</button><button id="cancelOfferEdit" class="btn">Cancel</button></div>
     </div>
 </div>
@@ -418,8 +432,6 @@
         let selectedPackage = null;
         let editingMil = null;
 
-        const OWNER_EMAIL = "testest7173@gmail.com";
-        const OWNER_PASSWORD = "owner123";
         const basePackages = [
             { mil: 5, price: 3 }, { mil: 10, price: 5 }, { mil: 15, price: 15 }, { mil: 20, price: 20 },
             { mil: 25, price: 25 }, { mil: 30, price: 30 }, { mil: 35, price: 40 }, { mil: 40, price: 50 },
@@ -428,16 +440,30 @@
             { mil: 85, price: 140 }, { mil: 90, price: 150 }, { mil: 95, price: 160 }, { mil: 100, price: 170 }
         ];
 
-        // Ensure owner exists
-        const ownerExists = users.find(u => u.email === OWNER_EMAIL);
-        if (!ownerExists) users.push({ email: OWNER_EMAIL, username: "Owner", password: OWNER_PASSWORD });
-        else ownerExists.password = OWNER_PASSWORD;
-        localStorage.setItem('secsell_users', JSON.stringify(users));
-        if (!adminEmails.includes(OWNER_EMAIL)) adminEmails.push(OWNER_EMAIL);
-        localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+        if (!localStorage.getItem('secsell_inventory')) {
+            const defaultStock = {};
+            basePackages.forEach(pkg => { defaultStock[pkg.mil] = 10; });
+            localStorage.setItem('secsell_inventory', JSON.stringify(defaultStock));
+        }
+        let inventory = JSON.parse(localStorage.getItem('secsell_inventory'));
+        function saveInventory() { localStorage.setItem('secsell_inventory', JSON.stringify(inventory)); }
 
-        function isOwner() { return currentUser && currentUser.email === OWNER_EMAIL; }
-        function isAdmin() { return currentUser && (currentUser.email === OWNER_EMAIL || adminEmails.includes(currentUser.email)); }
+        if (users.length === 0 && adminEmails.length === 0) {
+            localStorage.removeItem('secsell_admin_emails');
+            adminEmails = [];
+        }
+
+        function isOwner() {
+            if (!currentUser) return false;
+            if (adminEmails.length === 0) return true;
+            return adminEmails[0] === currentUser.email;
+        }
+
+        function isAdmin() {
+            if (!currentUser) return false;
+            if (isOwner()) return true;
+            return adminEmails.includes(currentUser.email);
+        }
 
         function isOfferActive(mil) {
             if (!offers[mil] || !offers[mil].salePrice || offers[mil].salePrice <= 0) return false;
@@ -446,6 +472,7 @@
         }
         function getEffectivePrice(pkg) { return isOfferActive(pkg.mil) ? offers[pkg.mil].salePrice : pkg.price; }
         function getSaleDescription(mil) { return offers[mil]?.description || ""; }
+        function getStock(mil) { return inventory[mil] !== undefined ? inventory[mil] : 0; }
         function getWaitTime(mil) { if(mil<=20) return "1 day"; if(mil<=40) return "2 days"; if(mil<=70) return "3 days"; if(mil<=90) return "4 days"; return "5 days"; }
 
         function renderAccounts() {
@@ -456,6 +483,8 @@
                 const onSale = isOfferActive(pkg.mil);
                 const effectivePrice = getEffectivePrice(pkg);
                 const saleDesc = getSaleDescription(pkg.mil);
+                const stock = getStock(pkg.mil);
+                const lowStockClass = stock <= 2 ? 'low-stock' : '';
                 const card = document.createElement('div');
                 card.className = `account-card ${selectedPackage && selectedPackage.mil === pkg.mil ? 'selected' : ''}`;
                 card.innerHTML = `
@@ -466,6 +495,7 @@
                         <i class="fas fa-pencil-alt edit-price-icon" data-mil="${pkg.mil}"></i>
                     </div>
                     ${onSale && saleDesc ? `<div class="sale-description">${escapeHtml(saleDesc)}</div>` : ''}
+                    <div class="stock-badge ${lowStockClass}">📦 In stock: ${stock}</div>
                     <div class="wait-badge"><i class="fas fa-clock"></i> ${getWaitTime(pkg.mil)}</div>
                     <div class="select-badge">select</div>
                 `;
@@ -483,18 +513,25 @@
         function updateBankReference() { if(selectedPackage) document.getElementById('dynamicBankRef').innerHTML = `${selectedPackage.price}€ | SEC_${selectedPackage.mil}M`; }
         function openEditOfferModal() { 
             const offer = offers[editingMil] || {};
+            const stock = getStock(editingMil);
             document.getElementById('editMilDisplay').innerText = editingMil;
             document.getElementById('editSalePrice').value = offer.salePrice || '';
             document.getElementById('editSaleDesc').value = offer.description || '';
             document.getElementById('editEndDate').value = offer.endDate ? offer.endDate.slice(0,16) : '';
+            document.getElementById('editStock').value = stock;
             document.getElementById('editOfferModal').style.display = 'flex';
         }
         document.getElementById('saveOfferEdit')?.addEventListener('click', () => { 
             const salePrice = parseFloat(document.getElementById('editSalePrice').value); 
             const endDate = document.getElementById('editEndDate').value;
             const description = document.getElementById('editSaleDesc').value.trim();
+            const newStock = parseInt(document.getElementById('editStock').value);
             if(!isNaN(salePrice) && salePrice>0 && endDate) offers[editingMil] = { salePrice, endDate, description };
             else delete offers[editingMil];
+            if(!isNaN(newStock) && newStock >= 0) {
+                inventory[editingMil] = newStock;
+                saveInventory();
+            }
             localStorage.setItem('secsell_offers', JSON.stringify(offers)); 
             renderAccounts(); 
             if(selectedPackage && selectedPackage.mil===editingMil){ const pkg = basePackages.find(p=>p.mil===editingMil); selectedPackage.price = getEffectivePrice(pkg); selectedPackage.onSale = isOfferActive(editingMil); updateOrderDisplay(); } 
@@ -502,7 +539,6 @@
         });
         document.getElementById('cancelOfferEdit')?.addEventListener('click', () => { document.getElementById('editOfferModal').style.display = 'none'; });
 
-        // Orders
         function addOrder(packageMil, price, method) {
             if(!currentUser) return;
             const order = { id: Date.now(), timestamp: new Date().toISOString(), userName: currentUser.username, userEmail: currentUser.email, packageMil, price, method };
@@ -529,14 +565,20 @@
             const badge = document.getElementById('adminBadge');
             if(!isAdmin()) return;
             const lastVisit = parseInt(localStorage.getItem('lastAdminVisit') || '0');
-            const newChats = Object.values(getChatsDB()).some(chat => chat.messages?.some(m => m.sender === 'customer' && (m.timestamp > lastVisit)));
+            let newChats = false;
+            const db = getChatsDB();
+            for (let id in db) {
+                if (db[id].messages && db[id].messages.some(m => m.sender === 'customer' && (m.timestamp > lastVisit))) {
+                    newChats = true;
+                    break;
+                }
+            }
             const newOrders = orders.some(o => new Date(o.timestamp).getTime() > lastVisit);
             if(newChats || newOrders) badge.style.display = 'inline-block';
             else badge.style.display = 'none';
         }
         function markAdminSeen() { localStorage.setItem('lastAdminVisit', Date.now().toString()); updateAdminBadge(); }
 
-        // Announcements
         function updateAnnouncementBar() { 
             const now = new Date(); 
             const active = announcements.filter(a => a.text && a.endDate && new Date(a.endDate) > now); 
@@ -570,7 +612,6 @@
         document.getElementById('newAnnouncementBtn')?.addEventListener('click', () => { announcements.push({ text: "New announcement", endDate: "" }); renderAdminAnnouncements(); });
         function collectAnnouncementsFromInputs() { saveAnnouncements(); }
 
-        // Live Chat
         function getChatsDB() { return JSON.parse(localStorage.getItem('secsell_chats') || '{}'); }
         function saveChatsDB(db) { localStorage.setItem('secsell_chats', JSON.stringify(db)); }
         function getCustomerChatId() { let id = localStorage.getItem('customer_chat_id'); if(!id){ id='chat_'+Date.now()+'_'+Math.random().toString(36).substr(2,8); localStorage.setItem('customer_chat_id',id); } return id; }
@@ -589,7 +630,6 @@
         document.getElementById('closeChatBtn')?.addEventListener('click', ()=>document.getElementById('chatOverlay').style.display='none');
         setInterval(()=>{ if(document.getElementById('chatOverlay')?.style.display==='flex') refreshCustomerChatUI(); if(isAdmin()) refreshAdminChatUI(); }, 2000);
 
-        // Navigation & Tabs
         function showPage(pageId) {
             if((pageId === 'chats' || pageId === 'adminAnnouncements') && !isAdmin()) pageId = 'home';
             document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -611,7 +651,6 @@
             });
         });
 
-        // Payment handlers
         document.getElementById('confirmPaymentBtn')?.addEventListener('click',()=>{ 
             if(!selectedPackage) return alert('Select package');
             const method = document.querySelector('input[name="deliveryMethod"]:checked').value === 'email' ? 'Email' : 'Live Chat';
@@ -621,7 +660,6 @@
         document.getElementById('paypalTriggerBtn')?.addEventListener('click',(e)=>{ e.preventDefault(); if(!selectedPackage) return alert('Select package'); addOrder(selectedPackage.mil, selectedPackage.price, 'PayPal'); const email=currentUser.email; const form=document.createElement('form'); form.action='https://www.paypal.com/cgi-bin/webscr'; form.method='post'; form.target='_blank'; form.innerHTML=`<input name="cmd" value="_xclick"><input name="business" value="testest7173@gmail.com"><input name="item_name" value="SecSell ${selectedPackage.mil}M"><input name="amount" value="${selectedPackage.price}"><input name="currency_code" value="EUR"><input name="custom" value="Buyer:${email}, Package:${selectedPackage.mil}M">`; document.body.appendChild(form); form.submit(); form.remove(); });
         document.getElementById('bankInfoBtn')?.addEventListener('click',()=>{ const box=document.getElementById('bankDetailsBox'); if(box) box.style.display=box.style.display==='none'?'block':'none'; });
 
-        // Settings & Admin Management
         const settingsModal = document.getElementById('settingsModal');
         function openSettingsModal() {
             document.getElementById('settingsDisplayName').value = currentUser?.username || '';
@@ -633,7 +671,9 @@
             const container = document.getElementById('adminList');
             if(!container) return;
             container.innerHTML = '';
-            adminEmails.filter(e => e !== OWNER_EMAIL).forEach(email => {
+            const ownerEmail = adminEmails[0] || null;
+            const otherAdmins = adminEmails.filter(e => e !== ownerEmail);
+            otherAdmins.forEach(email => {
                 const user = users.find(u=>u.email===email);
                 const div = document.createElement('div'); div.className = 'admin-user-item';
                 div.innerHTML = `<span>${escapeHtml(email)} (${user?.username || '?'})</span><button class="removeAdminBtn" data-email="${email}" style="background:#aa2e4e; border:none; padding:4px 10px; border-radius:20px;">Remove</button>`;
@@ -677,7 +717,6 @@
         document.getElementById('logoutBtn')?.addEventListener('click',()=>{ localStorage.removeItem('secsell_current_user'); location.reload(); });
         document.getElementById('profileIcon')?.addEventListener('click',()=>{ const menu=document.getElementById('dropdownMenu'); menu.style.display=menu.style.display==='flex'?'none':'flex'; });
 
-        // Auth
         function register(email, username, password) { if(users.find(u=>u.email===email)) return false; users.push({email, username, password}); localStorage.setItem('secsell_users',JSON.stringify(users)); return true; }
         function login(email, password) { return users.find(u=>u.email===email && u.password===password); }
         const authContainer = document.getElementById('authContainer'), appDiv = document.getElementById('app');
@@ -700,6 +739,10 @@
                 if(user) {
                     currentUser = user;
                     localStorage.setItem('secsell_current_user', JSON.stringify(user));
+                    if (adminEmails.length === 0 && users.length === 1) {
+                        adminEmails.push(currentUser.email);
+                        localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+                    }
                     authContainer.style.display = 'none';
                     appDiv.style.display = 'block';
                     const isUserAdmin = isAdmin();
@@ -712,11 +755,17 @@
                     updateAnnouncementBar();
                     setInterval(updateAnnouncementBar, 60000);
                     updateAdminBadge();
-                } else { document.getElementById('authError').innerText = 'Invalid credentials. Owner password is "owner123"'; }
+                } else { document.getElementById('authError').innerText = 'Invalid credentials'; }
             } else {
                 if(!username) { document.getElementById('authError').innerText = 'Username required'; return; }
-                if(register(email, username, password)) { document.getElementById('authError').innerText = 'Registered! Please login.'; toggleAuthMode(); }
-                else { document.getElementById('authError').innerText = 'Email already exists'; }
+                if(register(email, username, password)) {
+                    if (users.length === 1 && adminEmails.length === 0) {
+                        adminEmails.push(email);
+                        localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+                    }
+                    document.getElementById('authError').innerText = 'Registered! Please login.';
+                    toggleAuthMode();
+                } else { document.getElementById('authError').innerText = 'Email already exists'; }
             }
         }
         document.getElementById('authSubmitBtn')?.addEventListener('click', handleAuth);
