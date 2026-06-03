@@ -843,6 +843,41 @@
                         adminEmails.push(currentUser.email);
                         localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
                     }
+                    function isAdminLoggedIn() {
+  return Boolean(localStorage.getItem('secsell_admin_token'));
+}
+
+function updateAdminUi() {
+  const adminVisible = isAdminLoggedIn();
+
+  const chatsNavItem = document.getElementById('chatsNavItem');
+  const adminAnnouncementNav = document.getElementById('adminAnnouncementNav');
+
+  if (chatsNavItem) {
+    chatsNavItem.style.display = adminVisible ? 'block' : 'none';
+  }
+
+  if (adminAnnouncementNav) {
+    adminAnnouncementNav.style.display = adminVisible ? 'block' : 'none';
+  }
+
+  if (adminVisible) {
+    document.body.classList.add('admin-mode');
+  } else {
+    document.body.classList.remove('admin-mode');
+
+    const currentActivePage = document.querySelector('.page.active');
+    if (
+      currentActivePage &&
+      (
+        currentActivePage.id === 'page-chats' ||
+        currentActivePage.id === 'page-adminAnnouncements'
+      )
+    ) {
+      showPage('home');
+    }
+  }
+}
                     authContainer.style.display = 'none';
                     appDiv.style.display = 'block';
                     const isUserAdmin = isAdmin();
