@@ -309,6 +309,23 @@
   <div id="page-reviews" class="page">
     <div class="glass-card">
       <h2><i class="fas fa-star"></i> Reviews</h2>
+      <p class="status-line">Write your own review. It will be visible to everyone after submitting.</p>
+      <div class="mini-card" style="margin:1rem 0;">
+        <h3>Leave a review</h3>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-top:0.75rem;">
+          <input type="text" id="reviewName" placeholder="Your name">
+          <select id="reviewRating">
+            <option value="5">★★★★★ 5 stars</option>
+            <option value="4">★★★★ 4 stars</option>
+            <option value="3">★★★ 3 stars</option>
+            <option value="2">★★ 2 stars</option>
+            <option value="1">★ 1 star</option>
+          </select>
+        </div>
+        <textarea id="reviewText" placeholder="Write your review..." style="min-height:90px; margin-top:0.75rem;"></textarea>
+        <button id="submitReviewBtn" class="btn btn-accent" style="margin-top:0.5rem;">Submit Review</button>
+        <p id="reviewStatus" class="status-line"></p>
+      </div>
       <div id="reviewsGrid" class="review-grid"></div>
     </div>
   </div>
@@ -325,7 +342,6 @@
           <div style="flex:1; min-width:220px; background:#0f112e; border-radius:1rem; padding:1rem;"><h3>Active Chats</h3><div id="chatList"></div></div>
           <div style="flex:3; min-width:280px; background:#0f112e; border-radius:1rem; padding:1rem;"><h3>Conversation</h3><div id="adminChatThread" style="max-height:400px; overflow-y:auto;"></div><div style="display:flex; gap:0.5rem; margin-top:0.5rem;"><input type="text" id="adminReplyInput" placeholder="Reply..."><button id="sendAdminReplyBtn" class="chat-send">Send</button></div></div>
         </div>
-        <p class="status-line">Hinweis: Dieser einfache Live-Chat nutzt aktuell Browser-Speicher. Für echten Geräte-übergreifenden Chat müsste er auch ins Backend.</p>
       </div>
       <div id="ordersTab" style="display: none;">
         <h3>Payment Reports</h3>
@@ -556,10 +572,45 @@
     const list = reviews.length ? reviews : [
       { name: 'SecSell', rating: 5, text: 'Reviews will appear here soon.' }
     ];
-    grid.innerHTML = list.map(r => {
-      const stars = '★'.repeat(Math.max(1, Math.min(5, Number(r.rating) || 5)));
-      return `<div class="mini-card"><h3>${escapeHtml(stars)}</h3><p>“${escapeHtml(r.text || '')}”</p><p class="small-meta">— ${escapeHtml(r.name || 'Customer')}</p></div>`;
+    grid.innerHTML = [...list].reverse().map(r => {
+      const rating = Math.max(1, Math.min(5, Number(r.rating) || 5));
+      const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const date = r.timestamp ? `<span> • ${new Date(r.timestamp).toLocaleDateString()}</span>` : '';
+      return `<div class="mini-card"><h3>${escapeHtml(stars)}</h3><p>“${escapeHtml(r.text || '')}”</p><p class="small-meta">— ${escapeHtml(r.name || 'Customer')}${date}</p></div>`;
     }).join('');
+  }
+
+  async function submitReview() {
+    const nameInput = document.getElementById('reviewName');
+    const ratingInput = document.getElementById('reviewRating');
+    const textInput = document.getElementById('reviewText');
+    const status = document.getElementById('reviewStatus');
+
+    const payload = {
+      name: (nameInput?.value || currentUser?.username || 'Customer').trim(),
+      rating: Number(ratingInput?.value || 5),
+      text: (textInput?.value || '').trim()
+    };
+
+    if (!payload.text || payload.text.length < 8) {
+      if (status) status.textContent = 'Please write at least 8 characters.';
+      return;
+    }
+
+    try {
+      if (status) status.textContent = 'Saving review...';
+      const data = await api('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      reviews = data.reviews || reviews;
+      renderReviews();
+      if (textInput) textInput.value = '';
+      if (status) status.textContent = 'Review submitted. Thank you.';
+    } catch (err) {
+      if (status) status.textContent = err.message || 'Could not save review.';
+    }
   }
 
   function renderAccounts() {
@@ -1040,6 +1091,7 @@
   document.querySelectorAll('.nav-links a').forEach(link => {
     link.addEventListener('click', e => { e.preventDefault(); showPage(link.dataset.page); });
   });
+  document.getElementById('submitReviewBtn')?.addEventListener('click', submitReview);
   document.querySelectorAll('.admin-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
