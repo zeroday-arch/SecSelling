@@ -215,6 +215,9 @@
         <li><a data-page="about">About</a></li>
         <li><a data-page="accounts">Accounts</a></li>
         <li><a data-page="support">Support</a></li>
+        <li><a data-page="myOrders">My Orders</a></li>
+        <li><a data-page="faq">FAQ</a></li>
+        <li><a data-page="reviews">Reviews</a></li>
         <li id="chatsNavItem" style="display:none;"><a data-page="chats">Admin <span id="adminBadge" class="badge" style="display:none;">!</span></a></li>
         <li id="adminAnnouncementNav" style="display:none;"><a data-page="adminAnnouncements">Announcements</a></li>
       </ul>
@@ -277,6 +280,39 @@
     </div>
   </div>
 
+
+  <div id="page-myOrders" class="page">
+    <div class="glass-card">
+      <h2><i class="fas fa-list-check"></i> My Orders</h2>
+      <p class="status-line">Orders are shown for your logged-in email.</p>
+      <div style="overflow-x:auto; margin-top:1rem;">
+        <table class="order-table">
+          <thead><tr><th>Date</th><th>Package</th><th>Price</th><th>Method</th><th>Status</th><th>Note</th></tr></thead>
+          <tbody id="myOrdersList"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-faq" class="page">
+    <div class="glass-card">
+      <h2><i class="fas fa-circle-question"></i> FAQ</h2>
+      <div class="faq-grid">
+        <div class="mini-card"><h3>How long does delivery take?</h3><p>Small packages usually take around 1 day. Large packages can take up to 5 business days.</p></div>
+        <div class="mini-card"><h3>How do I confirm payment?</h3><p>Select a package, choose payment, then click “Report Payment”. Your order appears in My Orders.</p></div>
+        <div class="mini-card"><h3>Where do I see updates?</h3><p>Open My Orders. Admin can change your status from pending to delivered.</p></div>
+        <div class="mini-card"><h3>Can I use live chat?</h3><p>Yes, choose live chat delivery or open Support. Real cross-device chat is the next big backend upgrade.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-reviews" class="page">
+    <div class="glass-card">
+      <h2><i class="fas fa-star"></i> Reviews</h2>
+      <div id="reviewsGrid" class="review-grid"></div>
+    </div>
+  </div>
+
   <div id="page-chats" class="page">
     <div class="glass-card">
       <h2><i class="fas fa-tools"></i> Admin Console</h2>
@@ -295,7 +331,7 @@
         <h3>Payment Reports</h3>
         <div style="overflow-x:auto;">
           <table class="order-table">
-            <thead><tr><th>Date</th><th>Customer</th><th>Email</th><th>Package</th><th>Price</th><th>Method</th></tr></thead>
+            <thead><tr><th>Date</th><th>Customer</th><th>Email</th><th>Package</th><th>Price</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="ordersList"></tbody>
           </table>
         </div>
@@ -373,6 +409,7 @@
   let offers = {};
   let announcements = [];
   let inventory = {};
+  let reviews = [];
   let selectedPackage = null;
   let editingMil = null;
   let selectedAdminChatId = null;
@@ -444,14 +481,17 @@
       offers = data.offers || {};
       announcements = data.announcements || [];
       inventory = data.inventory || {};
+      reviews = data.reviews || [];
     } catch (err) {
       console.error(err);
       offers = {};
       announcements = [];
       inventory = {};
+      reviews = [];
     }
     updateAnnouncementBar();
     renderAccounts();
+    renderReviews();
   }
 
   function isOfferActive(mil) {
@@ -481,6 +521,47 @@
     return '5 days';
   }
 
+
+  function formatStatus(status) {
+    const labels = {
+      payment_pending: 'Payment pending',
+      paid: 'Paid',
+      in_progress: 'In progress',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled'
+    };
+    return labels[status] || status || 'Payment pending';
+  }
+
+  function statusPill(status) {
+    const safe = status || 'payment_pending';
+    return `<span class="status-pill status-${escapeHtml(safe)}">${escapeHtml(formatStatus(safe))}</span>`;
+  }
+
+  function timeLeftText(endDate) {
+    if (!endDate) return '';
+    const diff = new Date(endDate).getTime() - Date.now();
+    if (diff <= 0) return 'ending now';
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h ${mins}m left`;
+    return `${mins}m left`;
+  }
+
+  function renderReviews() {
+    const grid = document.getElementById('reviewsGrid');
+    if (!grid) return;
+    const list = reviews.length ? reviews : [
+      { name: 'SecSell', rating: 5, text: 'Reviews will appear here soon.' }
+    ];
+    grid.innerHTML = list.map(r => {
+      const stars = '★'.repeat(Math.max(1, Math.min(5, Number(r.rating) || 5)));
+      return `<div class="mini-card"><h3>${escapeHtml(stars)}</h3><p>“${escapeHtml(r.text || '')}”</p><p class="small-meta">— ${escapeHtml(r.name || 'Customer')}</p></div>`;
+    }).join('');
+  }
+
   function renderAccounts() {
     const grid = document.getElementById('accountsGrid');
     if (!grid) return;
@@ -500,6 +581,7 @@
           <i class="fas fa-pencil-alt edit-price-icon" data-mil="${pkg.mil}"></i>
         </div>
         ${onSale && saleDesc ? `<div class="sale-description">${escapeHtml(saleDesc)}</div>` : ''}
+        ${onSale ? `<div class="countdown" data-end="${escapeHtml(offers[String(pkg.mil)].endDate)}">⏳ ${escapeHtml(timeLeftText(offers[String(pkg.mil)].endDate))}</div>` : ''}
         <div class="stock-badge ${stock <= 2 ? 'low-stock' : ''}">📦 In stock: ${stock}</div>
         <div class="wait-badge"><i class="fas fa-clock"></i> ${getWaitTime(pkg.mil)}</div>
         <div class="select-badge">select</div>
@@ -523,6 +605,12 @@
         editingMil = Number(icon.dataset.mil);
         openEditOfferModal();
       });
+    });
+  }
+
+  function updateCountdowns() {
+    document.querySelectorAll('.countdown[data-end]').forEach(el => {
+      el.textContent = `⏳ ${timeLeftText(el.dataset.end)}`;
     });
   }
 
@@ -599,21 +687,63 @@
         body: JSON.stringify({ userName: currentUser.username, userEmail: currentUser.email, packageMil, price, method })
       });
       updateAdminBadge(true);
+      renderMyOrders();
     } catch (err) {
       console.error(err);
       alert('Order could not be saved. Contact support.');
     }
   }
 
+  async function renderMyOrders() {
+    const tbody = document.getElementById('myOrdersList');
+    if (!tbody || !currentUser?.email) return;
+    tbody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+    try {
+      const data = await api(`/api/orders?email=${encodeURIComponent(currentUser.email)}`);
+      const orders = data.orders || [];
+      tbody.innerHTML = '';
+      [...orders].reverse().forEach(order => {
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = new Date(order.timestamp).toLocaleString();
+        row.insertCell(1).textContent = `${order.packageMil} Million`;
+        row.insertCell(2).textContent = `${order.price} €`;
+        row.insertCell(3).textContent = order.method || '-';
+        row.insertCell(4).innerHTML = statusPill(order.status || 'payment_pending');
+        row.insertCell(5).textContent = order.adminNote || '-';
+      });
+      if (!orders.length) tbody.innerHTML = '<tr><td colspan="6">No orders yet.</td></tr>';
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="6">${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  async function updateOrderAdmin(orderId, status, adminNote) {
+    if (!isAdminLoggedIn()) return alert('Admin login required');
+    await api(`/api/admin/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ status, adminNote })
+    });
+    await renderOrdersList();
+  }
+
+  async function deleteOrderAdmin(orderId) {
+    if (!isAdminLoggedIn()) return alert('Admin login required');
+    if (!confirm('Delete this order?')) return;
+    await api(`/api/admin/orders/${orderId}`, { method: 'DELETE', headers: authHeaders() });
+    await renderOrdersList();
+  }
+
   async function renderOrdersList() {
     const tbody = document.getElementById('ordersList');
     if (!tbody || !isAdminLoggedIn()) return;
-    tbody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
     try {
       const data = await api('/api/admin/orders', { headers: authHeaders() });
       const orders = data.orders || [];
       tbody.innerHTML = '';
       [...orders].reverse().forEach(order => {
+        const status = order.status || 'payment_pending';
         const row = tbody.insertRow();
         row.insertCell(0).textContent = new Date(order.timestamp).toLocaleString();
         row.insertCell(1).textContent = order.userName || '-';
@@ -621,10 +751,30 @@
         row.insertCell(3).textContent = `${order.packageMil} Million`;
         row.insertCell(4).textContent = `${order.price} €`;
         row.insertCell(5).textContent = order.method || '-';
+        row.insertCell(6).innerHTML = statusPill(status);
+        const actionCell = row.insertCell(7);
+        actionCell.innerHTML = `
+          <div class="admin-order-actions">
+            <select class="order-status">
+              <option value="payment_pending" ${status === 'payment_pending' ? 'selected' : ''}>Payment pending</option>
+              <option value="paid" ${status === 'paid' ? 'selected' : ''}>Paid</option>
+              <option value="in_progress" ${status === 'in_progress' ? 'selected' : ''}>In progress</option>
+              <option value="delivered" ${status === 'delivered' ? 'selected' : ''}>Delivered</option>
+              <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+            </select>
+            <input class="order-note" value="${escapeHtml(order.adminNote || '')}" placeholder="Admin note">
+            <button class="btn btn-small save-order">Save</button>
+            <button class="btn btn-danger btn-small delete-order">Delete</button>
+          </div>
+        `;
+        actionCell.querySelector('.save-order').addEventListener('click', () => {
+          updateOrderAdmin(order.id, actionCell.querySelector('.order-status').value, actionCell.querySelector('.order-note').value);
+        });
+        actionCell.querySelector('.delete-order').addEventListener('click', () => deleteOrderAdmin(order.id));
       });
-      if (!orders.length) tbody.innerHTML = '<tr><td colspan="6">No orders yet.</td></tr>';
+      if (!orders.length) tbody.innerHTML = '<tr><td colspan="8">No orders yet.</td></tr>';
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="6">${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8">${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -797,6 +947,8 @@
     const activeLink = document.querySelector(`.nav-links a[data-page="${pageId}"]`);
     if (activeLink) activeLink.classList.add('active');
     if (pageId === 'accounts') renderAccounts();
+    if (pageId === 'myOrders') renderMyOrders();
+    if (pageId === 'reviews') renderReviews();
     if (pageId === 'chats' && isAdminLoggedIn()) { refreshAdminChatUI(); renderOrdersList(); updateAdminBadge(false); }
     if (pageId === 'adminAnnouncements' && isAdminLoggedIn()) renderAdminAnnouncements();
   }
@@ -843,6 +995,7 @@
     updateOrderDisplay();
     showPage('home');
     setInterval(updateAnnouncementBar, 60000);
+    setInterval(updateCountdowns, 1000);
   }
 
   async function handleAuth() {

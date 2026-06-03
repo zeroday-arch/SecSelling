@@ -24,7 +24,11 @@ const baseMils = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
 function defaultDb() {
   const inventory = {};
   baseMils.forEach(mil => { inventory[String(mil)] = 10; });
-  return { offers: {}, announcements: [], inventory, orders: [] };
+  return { offers: {}, announcements: [], inventory, orders: [], reviews: [
+    { name: 'Alex', rating: 5, text: 'Fast support and clear delivery steps.' },
+    { name: 'Mika', rating: 5, text: 'Order status made it easy to follow progress.' },
+    { name: 'Jonas', rating: 4, text: 'Clean process, got updates quickly.' }
+  ] };
 }
 
 async function readDb() {
@@ -47,7 +51,8 @@ function publicSiteData(db) {
   return {
     offers: db.offers || {},
     announcements: db.announcements || [],
-    inventory: db.inventory || {}
+    inventory: db.inventory || {},
+    reviews: db.reviews || []
   };
 }
 
@@ -167,7 +172,10 @@ app.post('/api/orders', async (req, res) => {
     userEmail: String(req.body.userEmail || '').slice(0, 120),
     packageMil: Number(req.body.packageMil),
     price: Number(req.body.price),
-    method: String(req.body.method || '').slice(0, 40)
+    method: String(req.body.method || '').slice(0, 40),
+    status: 'payment_pending',
+    adminNote: '',
+    updatedAt: new Date().toISOString()
   };
   db.orders.push(order);
   db.orders = db.orders.slice(-500);
@@ -179,6 +187,55 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   const db = await readDb();
   res.json({ orders: db.orders || [] });
 });
+app.get('/api/orders', async (req, res) => {
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'Missing email' });
+  const db = await readDb();
+  const orders = (db.orders || [])
+    .filter(order => String(order.userEmail || '').toLowerCase() === email)
+    .map(order => ({
+      id: order.id,
+      timestamp: order.timestamp,
+      packageMil: order.packageMil,
+      price: order.price,
+      method: order.method,
+      status: order.status || 'payment_pending',
+      adminNote: order.adminNote || '',
+      updatedAt: order.updatedAt || order.timestamp
+    }));
+  res.json({ orders });
+});
+
+app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const allowedStatuses = ['payment_pending', 'paid', 'in_progress', 'delivered', 'cancelled'];
+  const db = await readDb();
+  const order = (db.orders || []).find(item => Number(item.id) === id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  if (req.body.status !== undefined) {
+    const status = String(req.body.status || '').trim();
+    if (!allowedStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    order.status = status;
+  }
+  if (req.body.adminNote !== undefined) {
+    order.adminNote = String(req.body.adminNote || '').trim().slice(0, 500);
+  }
+  order.updatedAt = new Date().toISOString();
+  await writeDb(db);
+  res.json({ ok: true, order });
+});
+
+app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const db = await readDb();
+  const before = (db.orders || []).length;
+  db.orders = (db.orders || []).filter(item => Number(item.id) !== id);
+  if (db.orders.length === before) return res.status(404).json({ error: 'Order not found' });
+  await writeDb(db);
+  res.json({ ok: true });
+});
+
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
