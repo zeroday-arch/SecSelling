@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SecSell | Driving Empire Account Selling</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 10% 30%, #0f0c29, #1b1a3a, #24243e);
+            color: #f0f3fa;
+            line-height: 1.5;
+        }
+        .announcement-bar {
+            background: #ff9800;
+            color: #1e1a2f;
+            text-align: center;
+            padding: 0.7rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 2px solid #ffc107;
+            display: none;
+            position: relative;
+            z-index: 1001;
+        }
+        .close-announcement {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            background: rgba(0,0,0,0.2);
+            padding: 0 6px;
+            border-radius: 20px;
+        }
+        .navbar {
+            background: rgba(10, 12, 35, 0.75);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(180, 130, 255, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 0.9rem 2rem;
+        }
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .logo h2 {
+            font-weight: 800;
+            font-size: 1.9rem;
+            background: linear-gradient(135deg, #e2c9ff, #b07eff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .logo span { font-size: 0.75rem; letter-spacing: 1px; color: #cbb5ff; display: block; margin-top: 4px; }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            list-style: none;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            color: #eef2ff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            padding: 0.4rem 0;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            position: relative;
+        }
+        .nav-links a:hover, .nav-links a.active { color: #d9b4ff; border-bottom-color: #b77eff; }
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -12px;
+            background: #ff5722;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .profile-container { position: relative; }
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            background: #5f4b9b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            border: 1px solid #c08eff;
+        }
+        .dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: 50px;
+            background: #1a1d45;
+            backdrop-filter: blur(8px);
+            border-radius: 1rem;
+            width: 200px;
+            display: none;
+            flex-direction: column;
+            z-index: 200;
+            border: 1px solid #6c63ff;
+        }
+        .dropdown-menu a {
+            padding: 0.7rem 1rem;
+            color: white;
+            text-decoration: none;
+            border-bottom: 1px solid #2a2d6a;
+            cursor: pointer;
+        }
+        .dropdown-menu a:hover { background: #3c3590; border-radius: 1rem; }
+        .page {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: none;
+        }
+        .page.active { display: block; }
+        .glass-card {
+            background: rgba(25, 30, 60, 0.55);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.4);
+        }
+        .hero { background: linear-gradient(125deg, rgba(45, 35, 100, 0.75), rgba(20, 20, 55, 0.8)); }
+        .hero h1 { font-size: 2.7rem; font-weight: 800; background: linear-gradient(to right, #f0e6ff, #cfb3ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .btn {
+            display: inline-block; background: rgba(110, 70, 210, 0.9); color: white;
+            padding: 0.7rem 1.8rem; border-radius: 3rem; font-weight: 600;
+            transition: 0.2s; border: none; cursor: pointer; font-size: 0.9rem;
+        }
+        .btn-accent { background: linear-gradient(95deg, #7c4dff, #b47cff); }
+        .btn-accent:hover { transform: translateY(-3px); box-shadow: 0 12px 22px rgba(0,0,0,0.4); }
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .account-card {
+            background: rgba(20, 25, 60, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 1.5rem;
+            padding: 1.2rem 0.8rem;
+            text-align: center;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,240,0.2);
+            cursor: pointer;
+            position: relative;
+        }
+        .account-card.selected {
+            border: 2px solid #c08eff;
+            background: rgba(80, 60, 160, 0.8);
+            transform: scale(1.02);
+        }
+        .mil { font-size: 1.8rem; font-weight: 800; color: #ecd9ff; }
+        .price-container { margin: 0.4rem 0; position: relative; display: inline-block; }
+        .original-price { font-size: 1rem; color: #ffaaaa; text-decoration: line-through; margin-right: 8px; }
+        .sale-price { font-size: 1.35rem; font-weight: 700; color: #ffd966; }
+        .normal-price { font-size: 1.35rem; font-weight: 700; color: #c3ffb2; }
+        .sale-description {
+            font-size: 0.7rem;
+            background: #ff9800;
+            color: #1e1a2f;
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            margin-top: 0.3rem;
+            font-weight: bold;
+        }
+        .stock-badge {
+            font-size: 0.75rem;
+            background: #2a5280;
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            margin-top: 0.4rem;
+            color: #aaf0ff;
+        }
+        .low-stock {
+            background: #aa2e4e;
+            color: white;
+        }
+        .edit-price-icon {
+            position: absolute;
+            right: -25px;
+            top: 2px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #aaa;
+            display: none;
+        }
+        .admin-mode .edit-price-icon { display: inline-block; }
+        .wait-badge { font-size: 0.7rem; background: #2a2660; display: inline-block; padding: 0.2rem 0.7rem; border-radius: 30px; margin-top: 0.3rem; color: #ffda9e; }
+        .select-badge { font-size: 0.75rem; background: #352f70; display: inline-block; padding: 0.2rem 1rem; border-radius: 30px; margin-top: 0.5rem; }
+        .sale-badge { position: absolute; top: 8px; right: 8px; background: #ff5722; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
+        .order-card { background: rgba(18, 22, 55, 0.7); backdrop-filter: blur(12px); border-radius: 1.8rem; padding: 2rem; margin-top: 2rem; }
+        input, select, textarea { width: 100%; padding: 0.8rem 1rem; border-radius: 1.2rem; border: none; background: #1a1e3a; color: white; border: 1px solid #4f4480; margin-bottom: 0.5rem; }
+        .radio-group { display: flex; gap: 1.8rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
+        .pay-buttons { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+        .paypal-btn { background: #ffc439; color: #0a0a2a; border: none; padding: 0.7rem 1.6rem; border-radius: 2rem; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+        .bank-info { background: #1e234b; border-radius: 1.2rem; padding: 1rem; margin-top: 1rem; border-left: 4px solid #9b6eff; }
+        footer { background: #04061a; padding: 2rem 2rem 1rem; border-top: 1px solid #2a2555; margin-top: 2rem; text-align: center; }
+        .disclaimer { background: #1e1b3eaa; padding: 1rem; border-radius: 1rem; font-size: 0.8rem; margin: 1rem 0; text-align: center; }
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at 10% 30%, #0f0c29, #1b1a3a, #24243e);
+        }
+        .auth-card {
+            background: rgba(20, 22, 55, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            padding: 2rem;
+            width: 400px;
+            max-width: 90%;
+            border: 1px solid #9b6eff;
+        }
+        .auth-switch { margin-top: 1rem; text-align: center; cursor: pointer; color: #c08eff; }
+        .chat-overlay {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 380px;
+            max-width: 90vw;
+            background: rgba(20, 22, 55, 0.96);
+            backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            border: 1px solid #6c63ff;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+        }
+        .chat-header { background: #3c3590; padding: 0.8rem 1rem; display: flex; justify-content: space-between; cursor: pointer; border-radius: 1.5rem 1.5rem 0 0; }
+        .chat-messages-area { padding: 1rem; max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.2); }
+        .chat-input-area { padding: 0.8rem; border-top: 1px solid #4a4280; display: flex; gap: 8px; }
+        .chat-input-area input { flex: 1; margin: 0; }
+        .chat-send { background: #7c4dff; border: none; border-radius: 2rem; padding: 0.5rem 1rem; cursor: pointer; color: white; }
+        .message-bubble { padding: 0.5rem 0.8rem; border-radius: 1rem; font-size: 0.85rem; max-width: 85%; }
+        .customer-msg { background: #2f2b6e; align-self: flex-start; }
+        .admin-msg { background: #4c4290; align-self: flex-end; text-align: right; }
+        .small-meta { font-size: 0.65rem; opacity: 0.7; margin-top: 4px; }
+        .admin-tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #4a4280; }
+        .admin-tab { padding: 0.5rem 1rem; cursor: pointer; border-radius: 1rem 1rem 0 0; }
+        .admin-tab.active { background: #3c3590; color: white; }
+        .order-table { width: 100%; border-collapse: collapse; }
+        .order-table th, .order-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #4a4280; }
+        .announcement-item-admin { background: #0f1130; padding: 1rem; border-radius: 1rem; margin-bottom: 1rem; }
+        .admin-user-item { background: #0f1130; padding: 0.5rem; border-radius: 1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
+        @media (max-width: 780px) { .hero h1 { font-size: 1.8rem; } .accounts-grid { grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); } }
+    </style>
+</head>
+<body>
+<div id="announcementBar" class="announcement-bar"></div>
+<div id="app" style="display: none;">
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo"><h2>SEC<span>SELL</span></h2><span>Account selling for Driving Empire</span></div>
+            <ul class="nav-links" id="navLinks">
+                <li><a data-page="home">Home</a></li>
+                <li><a data-page="about">About</a></li>
+                <li><a data-page="accounts">Accounts</a></li>
+                <li><a data-page="support">Support</a></li>
+                <li id="chatsNavItem" style="display:none;"><a data-page="chats">Admin <span id="adminBadge" class="badge" style="display:none;">!</span></a></li>
+                <li id="adminAnnouncementNav" style="display:none;"><a data-page="adminAnnouncements">Announcements</a></li>
+            </ul>
+            <div class="profile-container">
+                <div class="profile-icon" id="profileIcon"><i class="fas fa-user"></i></div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a id="settingsBtn"><i class="fas fa-cog"></i> Settings</a>
+                    <a id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div id="page-home" class="page active">
+        <div class="glass-card hero">
+            <h1>SecSell • Driving Empire</h1>
+            <p style="font-size:1.3rem; margin-top: 0.8rem;">No Matter how much. We'll got you!</p>
+            <div style="margin: 1.8rem 0;"><button id="homeChatBtn" class="btn btn-accent"><i class="fas fa-comment-dots"></i> Live Chat</button></div>
+            <div class="disclaimer">⚠️ Buying accounts that provide advantages is illegal and violates Roblox rules. We are not responsible for bans.</div>
+        </div>
+    </div>
+    <div id="page-about" class="page">
+        <div class="glass-card">
+            <h2><i class="fas fa-info-circle"></i> About SecSell</h2>
+            <p style="margin-top: 1rem;">We specialize in high-quality Driving Empire accounts with massive cash balances. The higher the requested millions, the longer the creation time (up to 5 business days).</p>
+            <p style="margin-top: 1rem;"><strong>Why do we do this?</strong> Many players love Driving Empire but don't have the time to grind for hours or days to afford the best vehicles and upgrades. We recognized this gap and decided to offer a fast, reliable, and safe alternative. Our team consists of experienced players who have mastered the most efficient grinding methods – we use legitimate in-game techniques to accumulate wealth, so your account remains safe from automated bans. By purchasing from us, you save dozens of hours of repetitive gameplay and can immediately enjoy the full Driving Empire experience. We believe in fair pricing, transparency, and excellent customer support. Every account is hand-farmed with care, and we stand behind our service with a clear delivery time based on the amount you order – because larger sums simply take more effort to obtain legitimately.</p>
+            <p style="margin-top: 1rem;">Our mission is to help you skip the grind without breaking any rules (though buying accounts does violate Roblox ToS – we always inform you about the risks). We're here to provide convenience and speed, backed by a passionate team.</p>
+        </div>
+    </div>
+    <div id="page-accounts" class="page">
+        <h2><i class="fas fa-coins"></i> Available Cash Packages</h2>
+        <div class="accounts-grid" id="accountsGrid"></div>
+        <div class="order-card">
+            <h3>Order & Payment</h3>
+            <div id="selectedPackageDisplay" style="background:#262b55; padding:0.8rem; border-radius:1.2rem; margin:1rem 0;"></div>
+            <div class="bank-info" style="margin-bottom:1rem;">📧 Your email (from account): <strong id="displayUserEmail"></strong></div>
+            <div class="radio-group">
+                <label><input type="radio" name="deliveryMethod" value="email" checked> <i class="fas fa-envelope-open-text"></i> Email with login data</label>
+                <label><input type="radio" name="deliveryMethod" value="livechat"> <i class="fas fa-comments"></i> Live Chat handover</label>
+            </div>
+            <div class="pay-buttons">
+                <button id="paypalTriggerBtn" class="paypal-btn"><i class="fab fa-paypal"></i> PayPal</button>
+                <button id="bankInfoBtn" class="btn">Bank Transfer</button>
+            </div>
+            <div id="bankDetailsBox" style="display:none;" class="bank-info">
+                IBAN: DE15 1001 0010 9876 5432 10<br>BIC: PBNKDEFFXXX<br>Reference: <span id="dynamicBankRef"></span>
+            </div>
+        </div>
+    </div>
+    <div id="page-support" class="page">
+        <div class="glass-card">
+            <h2><i class="fas fa-headset"></i> Support</h2>
+            <p><strong>Email:</strong> SecSell@proton.me</p>
+            <p><strong>Live Chat:</strong> Click the button below to chat directly with our team – your email and display name will be taken from your account automatically.</p>
+            <button id="supportChatBtn" class="btn btn-accent" style="margin:1rem 0;"><i class="fas fa-comment-dots"></i> Open Live Chat</button>
+            <p><strong>Payment confirmation:</strong> After sending payment via PayPal or bank transfer, click the button below to notify us.</p>
+            <button id="confirmPaymentBtn" class="btn" style="background:#5f4b9b;">Report Payment</button>
+        </div>
+    </div>
+    <div id="page-chats" class="page">
+        <div class="glass-card">
+            <h2><i class="fas fa-tools"></i> Admin Console</h2>
+            <div class="admin-tabs">
+                <div class="admin-tab active" data-tab="chats">💬 Chats</div>
+                <div class="admin-tab" data-tab="orders">📦 Orders</div>
+            </div>
+            <div id="chatsTab" style="display: block;">
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; background:#0f112e; border-radius:1rem; padding:1rem;"><h3>Active Chats</h3><div id="chatList"></div></div>
+                    <div style="flex:3; background:#0f112e; border-radius:1rem; padding:1rem;"><h3>Conversation <span id="selectedChatIdDisplay"></span></h3><div id="adminChatThread" style="max-height:400px; overflow-y:auto;"></div><div style="display:flex; gap:0.5rem; margin-top:0.5rem;"><input type="text" id="adminReplyInput" placeholder="Reply..."><button id="sendAdminReplyBtn" class="chat-send">Send</button></div></div>
+                </div>
+            </div>
+            <div id="ordersTab" style="display: none;">
+                <h3>Payment Reports</h3>
+                <div style="overflow-x:auto;">
+                    <table class="order-table">
+                        <thead><tr><th>Date</th><th>Customer</th><th>Email</th><th>Package</th><th>Price</th><th>Method</th></tr></thead>
+                        <tbody id="ordersList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="page-adminAnnouncements" class="page">
+        <div class="glass-card">
+            <h2><i class="fas fa-bullhorn"></i> Manage Announcements</h2>
+            <div id="adminAnnouncementsList"></div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+                <button id="newAnnouncementBtn" class="btn btn-accent">+ New Announcement</button>
+                <button id="saveAnnouncementsBtn" class="btn">Save Announcements</button>
+                <button id="exportSiteDataBtn" class="btn">Copy Public Data</button>
+            </div>
+            <textarea id="exportSiteDataOutput" readonly style="display:none; margin-top:1rem; min-height:140px; font-size:0.8rem;"></textarea>
+            <p class="small-meta" style="margin-top:0.75rem;">Important: this is a static HTML page. localStorage is private per browser. To make sales/announcements visible to every new visitor, copy the public data and paste it into DEFAULT_SITE_DATA in the script before publishing.</p>
+        </div>
+    </div>
+    <footer><div><h4>SECSELL</h4><p>Driving Empire Account Market<br>SecSell@proton.me</p><p>Buying accounts with advantages is illegal and violates Roblox rules. We assume no responsibility for bans.</p></div></footer>
+</div>
+
+<div id="authContainer" class="auth-container">
+    <div class="auth-card">
+        <h2 id="authTitle">Login</h2>
+        <input type="email" id="authEmail" placeholder="Email">
+        <input type="text" id="authUsername" placeholder="Username (for registration)" style="display:none;">
+        <input type="password" id="authPassword" placeholder="Password">
+        <button id="authSubmitBtn" class="btn btn-accent" style="width:100%; margin-top:1rem;">Login</button>
+        <div id="authSwitch" class="auth-switch">Don't have an account? Register</div>
+        <div id="authError" style="color:#ff8a7a; margin-top:0.5rem;"></div>
+    </div>
+</div>
+
+<div id="chatOverlay" class="chat-overlay">
+    <div class="chat-header"><span><i class="fas fa-comment"></i> SecSell Live Chat</span><span id="closeChatBtn">✕</span></div>
+    <div id="customerChatMessages" class="chat-messages-area"></div>
+    <div class="chat-input-area">
+        <input type="text" id="customerMsgInput" placeholder="Type your message...">
+        <button id="customerSendMsgBtn" class="chat-send">Send</button>
+    </div>
+</div>
+
+<div id="editOfferModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; justify-content:center; align-items:center;">
+    <div style="background:#1a1d45; padding:2rem; border-radius:2rem; width:380px;">
+        <h3>Edit Package <span id="editMilDisplay"></span>M</h3>
+        <input type="number" id="editSalePrice" placeholder="Sale price (€)">
+        <input type="text" id="editSaleDesc" placeholder="Short description (e.g. 'Flash Sale')">
+        <input type="datetime-local" id="editEndDate">
+        <div id="stockFieldContainer" style="display:none;">
+            <input type="number" id="editStock" placeholder="Available accounts (stock)">
+        </div>
+        <div style="display:flex; gap:1rem; margin-top:1rem;"><button id="saveOfferEdit" class="btn">Save</button><button id="cancelOfferEdit" class="btn">Cancel</button></div>
+    </div>
+</div>
+<div id="settingsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; justify-content:center; align-items:center;">
+    <div style="background:#1a1d45; padding:2rem; border-radius:2rem; width:400px; max-width:90%;">
+        <h2>Settings</h2>
+        <label>Display Name</label>
+        <input type="text" id="settingsDisplayName" placeholder="Your name">
+        <div id="adminManageSection" style="margin-top:1rem; border-top:1px solid #6c63ff; padding-top:1rem; display:none;">
+            <h3>Manage Admins</h3>
+            <div id="adminList"></div>
+            <div style="display:flex; gap:0.5rem; margin-top:0.5rem;"><input type="email" id="newAdminEmail" placeholder="User email"><button id="addAdminBtn" class="btn">Add Admin</button></div>
+            <p class="small" style="font-size:0.7rem;">Only owner can manage admins.</p>
+        </div>
+        <div style="margin-top:1.5rem; display:flex; gap:1rem;"><button id="saveSettingsBtn" class="btn btn-accent">Save Changes</button><button id="closeSettingsBtn" class="btn">Close</button></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        let currentUser = null;
+
+        /*
+            PUBLIC DEFAULT DATA
+            localStorage is private to one browser. Admin-created sales/announcements
+            will NOT automatically appear for other visitors on a static HTML page.
+            Put public sales and announcements here before publishing the file.
+            Admin page → "Copy Public Data" gives you the JSON to paste here.
+        */
+        const DEFAULT_SITE_DATA = {
+            offers: {
+                // Example:
+                // "10": { salePrice: 4, endDate: "2099-12-31T23:59", description: "Starter Sale" }
+            },
+            announcements: [
+                // Example:
+                // { text: "Flash sale is live today!", endDate: "2099-12-31T23:59" }
+            ],
+            inventory: {}
+        };
+
+        function loadJson(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (err) {
+                console.warn(`Reset broken localStorage key: ${key}`, err);
+                localStorage.removeItem(key);
+                return fallback;
+            }
+        }
+
+        function loadSiteState(key, defaults) {
+            const stored = loadJson(key, null);
+            if (stored === null) {
+                localStorage.setItem(key, JSON.stringify(defaults));
+                return structuredCloneSafe(defaults);
+            }
+            if (Array.isArray(defaults)) return stored;
+            return { ...defaults, ...stored };
+        }
+
+        function structuredCloneSafe(value) {
+            return JSON.parse(JSON.stringify(value));
+        }
+
+        let users = loadJson('secsell_users', []);
+        let adminEmails = loadJson('secsell_admin_emails', []);
+        let offers = loadSiteState('secsell_offers', DEFAULT_SITE_DATA.offers);
+        let announcements = loadSiteState('secsell_announcements', DEFAULT_SITE_DATA.announcements);
+        let orders = loadJson('secsell_orders', []);
+        let selectedPackage = null;
+        let editingMil = null;
+
+        const basePackages = [
+            { mil: 5, price: 3 }, { mil: 10, price: 5 }, { mil: 15, price: 15 }, { mil: 20, price: 20 },
+            { mil: 25, price: 25 }, { mil: 30, price: 30 }, { mil: 35, price: 40 }, { mil: 40, price: 50 },
+            { mil: 45, price: 60 }, { mil: 50, price: 70 }, { mil: 55, price: 80 }, { mil: 60, price: 90 },
+            { mil: 65, price: 100 }, { mil: 70, price: 110 }, { mil: 75, price: 120 }, { mil: 80, price: 130 },
+            { mil: 85, price: 140 }, { mil: 90, price: 150 }, { mil: 95, price: 160 }, { mil: 100, price: 170 }
+        ];
+
+        const defaultStock = {};
+        basePackages.forEach(pkg => { defaultStock[pkg.mil] = DEFAULT_SITE_DATA.inventory[pkg.mil] ?? 10; });
+        let inventory = loadSiteState('secsell_inventory', defaultStock);
+        function saveInventory() { localStorage.setItem('secsell_inventory', JSON.stringify(inventory)); }
+
+        function isOwner() {
+            if (!currentUser) return false;
+            if (adminEmails.length === 0) return true;
+            return adminEmails[0] === currentUser.email;
+        }
+        function isAdmin() {
+            if (!currentUser) return false;
+            if (adminEmails.length === 0) return true;
+            return adminEmails.includes(currentUser.email);
+        }
+
+        function isOfferActive(mil) {
+            if (!offers[mil] || !offers[mil].salePrice || offers[mil].salePrice <= 0) return false;
+            if (offers[mil].endDate && new Date(offers[mil].endDate) < new Date()) return false;
+            return true;
+        }
+        function getEffectivePrice(pkg) { return isOfferActive(pkg.mil) ? offers[pkg.mil].salePrice : pkg.price; }
+        function getSaleDescription(mil) { return offers[mil]?.description || ""; }
+        function getStock(mil) { return inventory[mil] !== undefined ? inventory[mil] : 0; }
+        function getWaitTime(mil) { if(mil<=20) return "1 day"; if(mil<=40) return "2 days"; if(mil<=70) return "3 days"; if(mil<=90) return "4 days"; return "5 days"; }
+
+        function renderAccounts() {
+            const grid = document.getElementById('accountsGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            basePackages.forEach(pkg => {
+                const onSale = isOfferActive(pkg.mil);
+                const effectivePrice = getEffectivePrice(pkg);
+                const saleDesc = getSaleDescription(pkg.mil);
+                const stock = getStock(pkg.mil);
+                const lowStockClass = stock <= 2 ? 'low-stock' : '';
+                const card = document.createElement('div');
+                card.className = `account-card ${selectedPackage && selectedPackage.mil === pkg.mil ? 'selected' : ''}`;
+                card.innerHTML = `
+                    ${onSale ? '<div class="sale-badge">SALE</div>' : ''}
+                    <div class="mil">${pkg.mil} Million 💰</div>
+                    <div class="price-container">
+                        ${onSale ? `<span class="original-price">${pkg.price}€</span> <span class="sale-price">${effectivePrice}€</span>` : `<span class="normal-price">${pkg.price}€</span>`}
+                        <i class="fas fa-pencil-alt edit-price-icon" data-mil="${pkg.mil}"></i>
+                    </div>
+                    ${onSale && saleDesc ? `<div class="sale-description">${escapeHtml(saleDesc)}</div>` : ''}
+                    <div class="stock-badge ${lowStockClass}">📦 In stock: ${stock}</div>
+                    <div class="wait-badge"><i class="fas fa-clock"></i> ${getWaitTime(pkg.mil)}</div>
+                    <div class="select-badge">select</div>
+                `;
+                card.addEventListener('click', (e) => { if(!e.target.classList.contains('edit-price-icon')){ selectedPackage = { mil: pkg.mil, price: effectivePrice, originalPrice: pkg.price, onSale }; updateOrderDisplay(); updateBankReference(); renderAccounts(); }});
+                grid.appendChild(card);
+            });
+            if (isAdmin()) document.body.classList.add('admin-mode');
+            else document.body.classList.remove('admin-mode');
+            document.querySelectorAll('.edit-price-icon').forEach(icon => {
+                icon.addEventListener('click', (e) => { e.stopPropagation(); editingMil = parseInt(icon.dataset.mil); openEditOfferModal(); });
+            });
+        }
+
+        function updateOrderDisplay() { const div = document.getElementById('selectedPackageDisplay'); if(selectedPackage) div.innerHTML = `✅ Selected: ${selectedPackage.mil}M - ${selectedPackage.price}€`; else div.innerHTML = '❌ No package selected'; }
+        function updateBankReference() { if(selectedPackage) document.getElementById('dynamicBankRef').innerHTML = `${selectedPackage.price}€ | SEC_${selectedPackage.mil}M`; }
+        function openEditOfferModal() { 
+            const offer = offers[editingMil] || {};
+            const stock = getStock(editingMil);
+            document.getElementById('editMilDisplay').innerText = editingMil;
+            document.getElementById('editSalePrice').value = offer.salePrice || '';
+            document.getElementById('editSaleDesc').value = offer.description || '';
+            document.getElementById('editEndDate').value = offer.endDate ? offer.endDate.slice(0,16) : '';
+            const stockFieldContainer = document.getElementById('stockFieldContainer');
+            if (isOwner()) {
+                stockFieldContainer.style.display = 'block';
+                document.getElementById('editStock').value = stock;
+            } else {
+                stockFieldContainer.style.display = 'none';
+            }
+            document.getElementById('editOfferModal').style.display = 'flex';
+        }
+        document.getElementById('saveOfferEdit')?.addEventListener('click', () => { 
+            const salePrice = parseFloat(document.getElementById('editSalePrice').value); 
+            const endDate = document.getElementById('editEndDate').value;
+            const description = document.getElementById('editSaleDesc').value.trim();
+            if(!isNaN(salePrice) && salePrice>0 && endDate) offers[editingMil] = { salePrice, endDate, description };
+            else delete offers[editingMil];
+            if (isOwner()) {
+                const newStock = parseInt(document.getElementById('editStock').value);
+                if(!isNaN(newStock) && newStock >= 0) {
+                    inventory[editingMil] = newStock;
+                    saveInventory();
+                }
+            }
+            localStorage.setItem('secsell_offers', JSON.stringify(offers)); 
+            renderAccounts(); 
+            if(selectedPackage && selectedPackage.mil===editingMil){ const pkg = basePackages.find(p=>p.mil===editingMil); selectedPackage.price = getEffectivePrice(pkg); selectedPackage.onSale = isOfferActive(editingMil); updateOrderDisplay(); } 
+            document.getElementById('editOfferModal').style.display = 'none'; 
+        });
+        document.getElementById('cancelOfferEdit')?.addEventListener('click', () => { document.getElementById('editOfferModal').style.display = 'none'; });
+
+        function addOrder(packageMil, price, method) {
+            if(!currentUser) return;
+            const order = { id: Date.now(), timestamp: new Date().toISOString(), userName: currentUser.username, userEmail: currentUser.email, packageMil, price, method };
+            orders.push(order);
+            localStorage.setItem('secsell_orders', JSON.stringify(orders));
+            updateAdminBadge();
+            renderOrdersList();
+        }
+        function renderOrdersList() {
+            const tbody = document.getElementById('ordersList');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            [...orders].reverse().forEach(order => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerText = new Date(order.timestamp).toLocaleString();
+                row.insertCell(1).innerText = order.userName;
+                row.insertCell(2).innerText = order.userEmail;
+                row.insertCell(3).innerText = order.packageMil + ' Million';
+                row.insertCell(4).innerText = order.price + ' €';
+                row.insertCell(5).innerText = order.method;
+            });
+        }
+        function updateAdminBadge() {
+            const badge = document.getElementById('adminBadge');
+            if(!isAdmin()) return;
+            const lastVisit = parseInt(localStorage.getItem('lastAdminVisit') || '0');
+            let newChats = false;
+            const db = getChatsDB();
+            for (let id in db) {
+                if (db[id].messages && db[id].messages.some(m => m.sender === 'customer' && (m.timestamp > lastVisit))) {
+                    newChats = true;
+                    break;
+                }
+            }
+            const newOrders = orders.some(o => new Date(o.timestamp).getTime() > lastVisit);
+            if(newChats || newOrders) badge.style.display = 'inline-block';
+            else badge.style.display = 'none';
+        }
+        function markAdminSeen() { localStorage.setItem('lastAdminVisit', Date.now().toString()); updateAdminBadge(); }
+
+        function updateAnnouncementBar() { 
+            const now = new Date(); 
+            const active = announcements.filter(a => a.text && a.endDate && new Date(a.endDate) > now); 
+            const bar = document.getElementById('announcementBar'); 
+            if(!bar) return;
+            if(active.length === 0) { bar.style.display = 'none'; return; } 
+            bar.innerHTML = `<span>📢 ${active.map(a => escapeHtml(a.text)).join(' • ')}</span><span class="close-announcement">✕</span>`; 
+            bar.style.display = 'block'; 
+            bar.querySelector('.close-announcement')?.addEventListener('click', () => bar.style.display = 'none');
+        }
+        function renderAdminAnnouncements() { 
+            const container = document.getElementById('adminAnnouncementsList'); 
+            if(!container) return; 
+            container.innerHTML = ''; 
+            announcements.forEach((ann, idx) => { 
+                const div = document.createElement('div'); 
+                div.className = 'announcement-item-admin'; 
+                div.innerHTML = `
+                    <label style="font-size:0.8rem; opacity:0.8;">Announcement text</label>
+                    <input type="text" id="annText_${idx}" value="${escapeHtml(ann.text || '')}" style="width:100%">
+                    <label style="font-size:0.8rem; opacity:0.8;">Visible until</label>
+                    <input type="datetime-local" id="annEnd_${idx}" value="${ann.endDate ? ann.endDate.slice(0,16) : ''}" style="margin-top:5px">
+                    <button class="removeAnnBtn" data-idx="${idx}" style="background:#aa2e4e; color:white; margin-top:5px; padding:7px 12px; border:none; border-radius:20px; cursor:pointer;">Delete</button>
+                `; 
+                container.appendChild(div); 
+            });
+            document.querySelectorAll('#adminAnnouncementsList input').forEach(inp => {
+                inp.addEventListener('input', collectAnnouncementsFromInputs);
+                inp.addEventListener('change', collectAnnouncementsFromInputs);
+            });
+            document.querySelectorAll('.removeAnnBtn').forEach(btn => btn.addEventListener('click', () => { 
+                const idx = parseInt(btn.dataset.idx); 
+                announcements.splice(idx,1); 
+                saveAnnouncements(); 
+                renderAdminAnnouncements(); 
+            })); 
+        }
+        function collectAnnouncementsFromInputs() {
+            const next = [];
+            document.querySelectorAll('.announcement-item-admin').forEach((item, idx) => {
+                const textInput = item.querySelector(`#annText_${idx}`);
+                const endInput = item.querySelector(`#annEnd_${idx}`);
+                const text = textInput ? textInput.value.trim() : '';
+                const endDate = endInput ? endInput.value : '';
+                if(text) next.push({ text, endDate });
+            });
+            announcements = next;
+            localStorage.setItem('secsell_announcements', JSON.stringify(announcements));
+            updateAnnouncementBar();
+        }
+        function saveAnnouncements() { 
+            collectAnnouncementsFromInputs();
+            alert('Announcements saved. Remember: for all new visitors on another device, copy public data into DEFAULT_SITE_DATA and republish the HTML.');
+        }
+        document.getElementById('newAnnouncementBtn')?.addEventListener('click', () => { 
+            announcements.push({ text: "New announcement", endDate: "2099-12-31T23:59" }); 
+            localStorage.setItem('secsell_announcements', JSON.stringify(announcements));
+            renderAdminAnnouncements();
+            updateAnnouncementBar();
+        });
+        document.getElementById('saveAnnouncementsBtn')?.addEventListener('click', saveAnnouncements);
+        document.getElementById('exportSiteDataBtn')?.addEventListener('click', () => {
+            collectAnnouncementsFromInputs();
+            const publicData = {
+                offers,
+                announcements,
+                inventory
+            };
+            const out = document.getElementById('exportSiteDataOutput');
+            const json = JSON.stringify(publicData, null, 4);
+            out.style.display = 'block';
+            out.value = json;
+            out.select();
+            navigator.clipboard?.writeText(json).then(() => alert('Public data copied. Paste it into DEFAULT_SITE_DATA before publishing.')).catch(() => alert('Public data generated. Copy it from the box.'));
+        });
+
+        function getChatsDB() { return JSON.parse(localStorage.getItem('secsell_chats') || '{}'); }
+        function saveChatsDB(db) { localStorage.setItem('secsell_chats', JSON.stringify(db)); }
+        function getCustomerChatId() { let id = localStorage.getItem('customer_chat_id'); if(!id){ id='chat_'+Date.now()+'_'+Math.random().toString(36).substr(2,8); localStorage.setItem('customer_chat_id',id); } return id; }
+        function setCustomerInfo(id, email, name) { const db=getChatsDB(); if(!db[id]) db[id]={messages:[]}; if(email) db[id].email=email; if(name) db[id].name=name; saveChatsDB(db); }
+        function addMessage(chatId, text, sender) { const db=getChatsDB(); if(!db[chatId]) db[chatId]={messages:[]}; const timestamp = Date.now(); db[chatId].messages.push({text, sender, time:new Date().toLocaleTimeString(), timestamp}); saveChatsDB(db); refreshCustomerChatUI(); refreshAdminChatUI(); updateAdminBadge(); }
+        function refreshCustomerChatUI() { const id=getCustomerChatId(); const db=getChatsDB(); const chat=db[id]||{messages:[]}; const container=document.getElementById('customerChatMessages'); if(!container) return; container.innerHTML=''; chat.messages.forEach(m=>{ const div=document.createElement('div'); div.className=`message-bubble ${m.sender==='admin'?'admin-msg':'customer-msg'}`; div.innerHTML=`<div>${escapeHtml(m.text)}</div><div class="small-meta">${m.sender==='admin'?'Support':(chat.name||currentUser?.username||'You')} • ${m.time}</div>`; container.appendChild(div); }); container.scrollTop=container.scrollHeight; }
+        let selectedAdminChatId=null;
+        function refreshAdminChatUI() { if(!isAdmin()) return; const db=getChatsDB(); const listDiv=document.getElementById('chatList'); if(listDiv){ listDiv.innerHTML=''; Object.keys(db).forEach(id=>{ const c=db[id]; const preview=c.messages.length?c.messages[c.messages.length-1].text.substring(0,40):'...'; const item=document.createElement('div'); item.className=`chat-list-item ${selectedAdminChatId===id?'active':''}`; item.innerHTML=`<strong>${escapeHtml(c.name||'?')}</strong><br><small>${escapeHtml(c.email||'no email')}</small><br><small>${escapeHtml(preview)}</small>`; item.onclick=()=>{ selectedAdminChatId=id; refreshAdminChatUI(); }; listDiv.appendChild(item); }); } const threadDiv=document.getElementById('adminChatThread'); if(selectedAdminChatId && db[selectedAdminChatId]){ const chat=db[selectedAdminChatId]; threadDiv.innerHTML=''; chat.messages.forEach(m=>{ const div=document.createElement('div'); div.className=`message-bubble ${m.sender==='admin'?'admin-msg':'customer-msg'}`; div.innerHTML=`<div>${escapeHtml(m.text)}</div><div class="small-meta">${m.sender==='admin'?'Admin':(chat.name||'Customer')} • ${m.time}</div>`; threadDiv.appendChild(div); }); threadDiv.scrollTop=threadDiv.scrollHeight; } else if(threadDiv) threadDiv.innerHTML='<div>Select a chat</div>'; }
+        document.getElementById('sendAdminReplyBtn')?.addEventListener('click',()=>{ if(!selectedAdminChatId) return alert('Select chat'); const msg=document.getElementById('adminReplyInput').value.trim(); if(msg){ addMessage(selectedAdminChatId, msg, 'admin'); document.getElementById('adminReplyInput').value=''; } });
+        function sendCustomerMessage() { if(!currentUser) return; const chatId=getCustomerChatId(); setCustomerInfo(chatId, currentUser.email, currentUser.username); const msg = document.getElementById('customerMsgInput').value.trim(); if(msg){ addMessage(chatId, msg, 'customer'); document.getElementById('customerMsgInput').value=''; } }
+        document.getElementById('customerSendMsgBtn')?.addEventListener('click', sendCustomerMessage);
+        document.getElementById('customerMsgInput')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendCustomerMessage(); });
+        function openChatOverlay() { if(!currentUser) return; document.getElementById('chatOverlay').style.display='flex'; refreshCustomerChatUI(); }
+        document.getElementById('homeChatBtn')?.addEventListener('click', openChatOverlay);
+        document.getElementById('supportChatBtn')?.addEventListener('click', openChatOverlay);
+        document.getElementById('closeChatBtn')?.addEventListener('click', ()=>document.getElementById('chatOverlay').style.display='none');
+        setInterval(()=>{ if(document.getElementById('chatOverlay')?.style.display==='flex') refreshCustomerChatUI(); if(isAdmin()) refreshAdminChatUI(); }, 2000);
+
+        function showPage(pageId) {
+            if((pageId === 'chats' || pageId === 'adminAnnouncements') && !isAdmin()) pageId = 'home';
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            document.querySelectorAll('.nav-links a').forEach(a=>a.classList.remove('active'));
+            const activeLink = document.querySelector(`.nav-links a[data-page="${pageId}"]`);
+            if(activeLink) activeLink.classList.add('active');
+            if(pageId==='accounts') renderAccounts();
+            else if(pageId==='chats' && isAdmin()) { refreshAdminChatUI(); renderOrdersList(); markAdminSeen(); }
+            else if(pageId==='adminAnnouncements' && isAdmin()){ renderAdminAnnouncements(); }
+        }
+        document.querySelectorAll('.nav-links a').forEach(link=>{ link.addEventListener('click',(e)=>{ e.preventDefault(); showPage(link.dataset.page); }); });
+        document.querySelectorAll('.admin-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('chatsTab').style.display = tab.dataset.tab === 'chats' ? 'block' : 'none';
+                document.getElementById('ordersTab').style.display = tab.dataset.tab === 'orders' ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('confirmPaymentBtn')?.addEventListener('click',()=>{ 
+            if(!selectedPackage) return alert('Select package');
+            const method = document.querySelector('input[name="deliveryMethod"]:checked').value === 'email' ? 'Email' : 'Live Chat';
+            addOrder(selectedPackage.mil, selectedPackage.price, method);
+            alert('Payment reported. We will contact you soon.');
+        });
+        document.getElementById('paypalTriggerBtn')?.addEventListener('click',(e)=>{ e.preventDefault(); if(!selectedPackage) return alert('Select package'); addOrder(selectedPackage.mil, selectedPackage.price, 'PayPal'); const email=currentUser.email; const form=document.createElement('form'); form.action='https://www.paypal.com/cgi-bin/webscr'; form.method='post'; form.target='_blank'; form.innerHTML=`<input name="cmd" value="_xclick"><input name="business" value="testest7173@gmail.com"><input name="item_name" value="SecSell ${selectedPackage.mil}M"><input name="amount" value="${selectedPackage.price}"><input name="currency_code" value="EUR"><input name="custom" value="Buyer:${email}, Package:${selectedPackage.mil}M">`; document.body.appendChild(form); form.submit(); form.remove(); });
+        document.getElementById('bankInfoBtn')?.addEventListener('click',()=>{ const box=document.getElementById('bankDetailsBox'); if(box) box.style.display=box.style.display==='none'?'block':'none'; });
+
+        const settingsModal = document.getElementById('settingsModal');
+        function openSettingsModal() {
+            document.getElementById('settingsDisplayName').value = currentUser?.username || '';
+            const isOwnerUser = isOwner();
+            document.getElementById('adminManageSection').style.display = isOwnerUser ? 'block' : 'none';
+            if(isOwnerUser) renderAdminList();
+            settingsModal.style.display = 'flex';
+        }
+        function renderAdminList() {
+            const container = document.getElementById('adminList');
+            if(!container) return;
+            container.innerHTML = '';
+            const nonOwnerAdmins = adminEmails.filter(e => e !== adminEmails[0]);
+            nonOwnerAdmins.forEach(email => {
+                const user = users.find(u=>u.email===email);
+                const div = document.createElement('div'); div.className = 'admin-user-item';
+                div.innerHTML = `<span>${escapeHtml(email)} (${user?.username || '?'})</span><button class="removeAdminBtn" data-email="${email}" style="background:#aa2e4e; border:none; padding:4px 10px; border-radius:20px;">Remove</button>`;
+                container.appendChild(div);
+            });
+            document.querySelectorAll('.removeAdminBtn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const email = btn.dataset.email;
+                    adminEmails = adminEmails.filter(e => e !== email);
+                    localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+                    renderAdminList();
+                    if(currentUser && currentUser.email === email) location.reload();
+                });
+            });
+        }
+        document.getElementById('addAdminBtn')?.addEventListener('click', () => {
+            const newEmail = document.getElementById('newAdminEmail').value.trim();
+            if(!newEmail) return alert('Enter email');
+            if(!users.find(u=>u.email===newEmail)) return alert('User not found');
+            if(adminEmails.includes(newEmail)) return alert('Already admin');
+            adminEmails.push(newEmail);
+            localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+            renderAdminList();
+            document.getElementById('newAdminEmail').value = '';
+        });
+        document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
+            const newName = document.getElementById('settingsDisplayName').value.trim();
+            if(newName && currentUser){
+                currentUser.username = newName;
+                const idx = users.findIndex(u=>u.email===currentUser.email);
+                if(idx!==-1) users[idx].username = newName;
+                localStorage.setItem('secsell_users', JSON.stringify(users));
+                localStorage.setItem('secsell_current_user', JSON.stringify(currentUser));
+                alert('Settings saved');
+            }
+            settingsModal.style.display = 'none';
+            location.reload();
+        });
+        document.getElementById('closeSettingsBtn')?.addEventListener('click', () => { settingsModal.style.display = 'none'; });
+        document.getElementById('settingsBtn')?.addEventListener('click', openSettingsModal);
+        document.getElementById('logoutBtn')?.addEventListener('click',()=>{ localStorage.removeItem('secsell_current_user'); location.reload(); });
+        document.getElementById('profileIcon')?.addEventListener('click',()=>{ const menu=document.getElementById('dropdownMenu'); menu.style.display=menu.style.display==='flex'?'none':'flex'; });
+
+        function register(email, username, password) { if(users.find(u=>u.email===email)) return false; users.push({email, username, password}); localStorage.setItem('secsell_users',JSON.stringify(users)); return true; }
+        function login(email, password) { return users.find(u=>u.email===email && u.password===password); }
+        const authContainer = document.getElementById('authContainer'), appDiv = document.getElementById('app');
+        let isLoginMode = true;
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authTitle').innerText = isLoginMode ? 'Login' : 'Register';
+            document.getElementById('authUsername').style.display = isLoginMode ? 'none' : 'block';
+            document.getElementById('authSubmitBtn').innerText = isLoginMode ? 'Login' : 'Register';
+            document.getElementById('authSwitch').innerText = isLoginMode ? "Don't have an account? Register" : "Already have an account? Login";
+        }
+        document.getElementById('authSwitch')?.addEventListener('click', toggleAuthMode);
+        function handleAuth() {
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const username = document.getElementById('authUsername').value.trim();
+            if(!email || !password) { document.getElementById('authError').innerText = 'Fill all fields'; return; }
+            if(isLoginMode) {
+                const user = login(email, password);
+                if(user) {
+                    currentUser = user;
+                    localStorage.setItem('secsell_current_user', JSON.stringify(user));
+                    if (adminEmails.length === 0) {
+                        adminEmails.push(currentUser.email);
+                        localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+                    }
+                    authContainer.style.display = 'none';
+                    appDiv.style.display = 'block';
+                    const isUserAdmin = isAdmin();
+                    document.getElementById('chatsNavItem').style.display = isUserAdmin ? 'block' : 'none';
+                    document.getElementById('adminAnnouncementNav').style.display = isUserAdmin ? 'block' : 'none';
+                    if(isUserAdmin) document.body.classList.add('admin-mode');
+                    showPage('home');
+                    document.getElementById('displayUserEmail').innerText = currentUser.email;
+                    renderAccounts();
+                    updateAnnouncementBar();
+                    setInterval(updateAnnouncementBar, 60000);
+                    updateAdminBadge();
+                } else {
+                    document.getElementById('authError').innerText = 'Invalid credentials';
+                }
+            } else {
+                if(!username) { document.getElementById('authError').innerText = 'Username required'; return; }
+                if(register(email, username, password)) {
+                    document.getElementById('authError').innerText = 'Registered! Please login.';
+                    toggleAuthMode();
+                } else {
+                    document.getElementById('authError').innerText = 'Email already exists';
+                }
+            }
+        }
+        document.getElementById('authSubmitBtn')?.addEventListener('click', handleAuth);
+
+        const savedUser = localStorage.getItem('secsell_current_user');
+        if(savedUser) {
+            currentUser = JSON.parse(savedUser);
+            if (adminEmails.length === 0) {
+                adminEmails.push(currentUser.email);
+                localStorage.setItem('secsell_admin_emails', JSON.stringify(adminEmails));
+            }
+            authContainer.style.display = 'none';
+            appDiv.style.display = 'block';
+            const isUserAdmin = isAdmin();
+            document.getElementById('chatsNavItem').style.display = isUserAdmin ? 'block' : 'none';
+            document.getElementById('adminAnnouncementNav').style.display = isUserAdmin ? 'block' : 'none';
+            if(isUserAdmin) document.body.classList.add('admin-mode');
+            showPage('home');
+            document.getElementById('displayUserEmail').innerText = currentUser.email;
+            renderAccounts();
+            updateAnnouncementBar();
+            setInterval(updateAnnouncementBar, 60000);
+            updateAdminBadge();
+        } else {
+            authContainer.style.display = 'flex';
+            appDiv.style.display = 'none';
+        }
+
+        function escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+    })();
+</script>
+</body>
+</html>
