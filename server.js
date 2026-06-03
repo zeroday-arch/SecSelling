@@ -87,6 +87,29 @@ app.get('/api/site', async (req, res) => {
   res.json(publicSiteData(db));
 });
 
+app.post('/api/reviews', async (req, res) => {
+  const name = String(req.body.name || 'Customer').trim().slice(0, 40) || 'Customer';
+  const rating = Math.max(1, Math.min(5, Number(req.body.rating) || 5));
+  const text = String(req.body.text || '').trim().slice(0, 300);
+
+  if (text.length < 8) {
+    return res.status(400).json({ error: 'Review text is too short' });
+  }
+
+  const db = await readDb();
+  const review = {
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+    name,
+    rating,
+    text
+  };
+
+  db.reviews = [ ...(db.reviews || []), review ].slice(-100);
+  await writeDb(db);
+  res.json({ ok: true, review, reviews: db.reviews });
+});
+
 app.post('/api/admin/login', async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
