@@ -24,7 +24,7 @@ const baseMils = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
 function defaultDb() {
   const inventory = {};
   baseMils.forEach(mil => { inventory[String(mil)] = 10; });
-  return { offers: {}, announcements: [], inventory, orders: [], reviews: [
+  return { offers: {}, announcements: [], inventory, orders: [], chats: {}, reviews: [
     { name: 'Alex', rating: 5, text: 'Fast support and clear delivery steps.' },
     { name: 'Mika', rating: 5, text: 'Order status made it easy to follow progress.' },
     { name: 'Jonas', rating: 4, text: 'Clean process, got updates quickly.' }
@@ -34,9 +34,9 @@ function defaultDb() {
 async function readDb() {
   try {
     const raw = await fs.readFile(DB_PATH, 'utf8');
-    return { ...defaultDb(), ...JSON.parse(raw) };
+    return ensureDbShapes({ ...defaultDb(), ...JSON.parse(raw) });
   } catch (error) {
-    const db = defaultDb();
+    const db = ensureDbShapes(defaultDb());
     await writeDb(db);
     return db;
   }
@@ -45,6 +45,35 @@ async function readDb() {
 async function writeDb(db) {
   await fs.mkdir(path.dirname(DB_PATH), { recursive: true });
   await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+}
+
+
+function publicChat(chat) {
+  return {
+    id: chat.id,
+    email: chat.email || '',
+    name: chat.name || 'Customer',
+    messages: chat.messages || [],
+    updatedAt: chat.updatedAt || chat.createdAt || new Date().toISOString()
+  };
+}
+
+function cleanChatText(text) {
+  return String(text || '').trim().slice(0, 1000);
+}
+
+function makeChatId() {
+  return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function ensureDbShapes(db) {
+  db.offers ||= {};
+  db.announcements ||= [];
+  db.inventory ||= {};
+  db.orders ||= [];
+  db.reviews ||= [];
+  db.chats ||= {};
+  return db;
 }
 
 function publicSiteData(db) {
@@ -108,6 +137,92 @@ app.post('/api/reviews', async (req, res) => {
   db.reviews = [ ...(db.reviews || []), review ].slice(-100);
   await writeDb(db);
   res.json({ ok: true, review, reviews: db.reviews });
+});
+
+
+app.post('/api/chats/message', async (req, res) => {
+  const text = cleanChatText(req.body.text);
+  if (!text) return res.status(400).json({ error: 'Message is empty' });
+
+  const db = await readDb();
+  const chatId = String(req.body.chatId || '').trim() || makeChatId();
+  if (!db.chats[chatId]) {
+    db.chats[chatId] = {
+      id: chatId,
+      email: String(req.body.email || '').trim().slice(0, 120),
+      name: String(req.body.name || 'Customer').trim().slice(0, 80) || 'Customer',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: []
+    };
+  }
+
+  const chat = db.chats[chatId];
+  if (req.body.email) chat.email = String(req.body.email || '').trim().slice(0, 120);
+  if (req.body.name) chat.name = String(req.body.name || 'Customer').trim().slice(0, 80) || 'Customer';
+  chat.messages.push({
+    id: Date.now(),
+    sender: 'customer',
+    text,
+    timestamp: Date.now(),
+    time: new Date().toLocaleTimeString()
+  });
+  chat.messages = chat.messages.slice(-200);
+  chat.updatedAt = new Date().toISOString();
+  await writeDb(db);
+  res.json({ ok: true, chatId, chat: publicChat(chat) });
+});
+
+app.get('/api/chats/:id', async (req, res) => {
+  const db = await readDb();
+  const chat = db.chats[String(req.params.id)] || { id: String(req.params.id), messages: [] };
+  res.json({ chat: publicChat(chat) });
+});
+
+app.get('/api/admin/chats', requireAdmin, async (req, res) => {
+  const db = await readDb();
+  const chats = Object.values(db.chats || {})
+    .map(publicChat)
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  res.json({ chats });
+});
+
+app.get('/api/admin/chats/:id', requireAdmin, async (req, res) => {
+  const db = await readDb();
+  const chat = db.chats[String(req.params.id)];
+  if (!chat) return res.status(404).json({ error: 'Chat not found' });
+  res.json({ chat: publicChat(chat) });
+});
+
+app.post('/api/admin/chats/:id/message', requireAdmin, async (req, res) => {
+  const text = cleanChatText(req.body.text);
+  if (!text) return res.status(400).json({ error: 'Message is empty' });
+
+  const db = await readDb();
+  const chatId = String(req.params.id);
+  const chat = db.chats[chatId];
+  if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+  chat.messages.push({
+    id: Date.now(),
+    sender: 'admin',
+    text,
+    timestamp: Date.now(),
+    time: new Date().toLocaleTimeString()
+  });
+  chat.messages = chat.messages.slice(-200);
+  chat.updatedAt = new Date().toISOString();
+  await writeDb(db);
+  res.json({ ok: true, chat: publicChat(chat) });
+});
+
+app.delete('/api/admin/chats/:id', requireAdmin, async (req, res) => {
+  const db = await readDb();
+  const chatId = String(req.params.id);
+  if (!db.chats[chatId]) return res.status(404).json({ error: 'Chat not found' });
+  delete db.chats[chatId];
+  await writeDb(db);
+  res.json({ ok: true });
 });
 
 app.post('/api/admin/login', async (req, res) => {

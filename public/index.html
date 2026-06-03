@@ -301,7 +301,7 @@
         <div class="mini-card"><h3>How long does delivery take?</h3><p>Small packages usually take around 1 day. Large packages can take up to 5 business days.</p></div>
         <div class="mini-card"><h3>How do I confirm payment?</h3><p>Select a package, choose payment, then click “Report Payment”. Your order appears in My Orders.</p></div>
         <div class="mini-card"><h3>Where do I see updates?</h3><p>Open My Orders. Admin can change your status from pending to delivered.</p></div>
-        <div class="mini-card"><h3>Can I use live chat?</h3><p>Yes, choose live chat delivery or open Support. Real cross-device chat is the next big backend upgrade.</p></div>
+        <div class="mini-card"><h3>Can I use live chat?</h3><p>Yes, choose live chat delivery or open Support. The admin can reply from the Admin chat panel.</p></div>
       </div>
     </div>
   </div>
@@ -814,10 +814,16 @@
               <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
             </select>
             <input class="order-note" value="${escapeHtml(order.adminNote || '')}" placeholder="Admin note">
+            <button class="btn btn-small quick-paid">Mark paid</button>
+            <button class="btn btn-small quick-progress">Mark in progress</button>
+            <button class="btn btn-small quick-delivered">Mark delivered</button>
             <button class="btn btn-small save-order">Save</button>
             <button class="btn btn-danger btn-small delete-order">Delete</button>
           </div>
         `;
+        actionCell.querySelector('.quick-paid').addEventListener('click', () => updateOrderAdmin(order.id, 'paid', actionCell.querySelector('.order-note').value));
+        actionCell.querySelector('.quick-progress').addEventListener('click', () => updateOrderAdmin(order.id, 'in_progress', actionCell.querySelector('.order-note').value));
+        actionCell.querySelector('.quick-delivered').addEventListener('click', () => updateOrderAdmin(order.id, 'delivered', actionCell.querySelector('.order-note').value));
         actionCell.querySelector('.save-order').addEventListener('click', () => {
           updateOrderAdmin(order.id, actionCell.querySelector('.order-status').value, actionCell.querySelector('.order-note').value);
         });
@@ -899,8 +905,17 @@
     }
   }
 
-  function getChatsDB() { return loadJson(CHATS_KEY, {}); }
-  function saveChatsDB(db) { saveJson(CHATS_KEY, db); }
+  async function fetchCustomerChat() {
+    const id = getCustomerChatId();
+    try {
+      const data = await api(`/api/chats/${encodeURIComponent(id)}`);
+      return data.chat || { id, messages: [] };
+    } catch (err) {
+      console.error(err);
+      return { id, messages: [] };
+    }
+  }
+
   function getCustomerChatId() {
     let id = localStorage.getItem(CUSTOMER_CHAT_ID_KEY);
     if (!id) {
@@ -909,84 +924,112 @@
     }
     return id;
   }
-  function setCustomerInfo(id, email, name) {
-    const db = getChatsDB();
-    if (!db[id]) db[id] = { messages: [] };
-    if (email) db[id].email = email;
-    if (name) db[id].name = name;
-    saveChatsDB(db);
+
+  async function addMessage(chatId, text, sender) {
+    if (!text) return;
+    try {
+      if (sender === 'admin') {
+        await api(`/api/admin/chats/${encodeURIComponent(chatId)}/message`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ text })
+        });
+        await refreshAdminChatUI();
+      } else {
+        const data = await api('/api/chats/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatId,
+            email: currentUser?.email || '',
+            name: currentUser?.username || 'Customer',
+            text
+          })
+        });
+        if (data.chatId) localStorage.setItem(CUSTOMER_CHAT_ID_KEY, data.chatId);
+        await refreshCustomerChatUI();
+      }
+      updateAdminBadge(true);
+    } catch (err) {
+      alert(err.message || 'Chat message could not be sent.');
+    }
   }
-  function addMessage(chatId, text, sender) {
-    const db = getChatsDB();
-    if (!db[chatId]) db[chatId] = { messages: [] };
-    db[chatId].messages.push({ text, sender, time: new Date().toLocaleTimeString(), timestamp: Date.now() });
-    saveChatsDB(db);
-    refreshCustomerChatUI();
-    refreshAdminChatUI();
-    updateAdminBadge(true);
-  }
-  function refreshCustomerChatUI() {
-    const id = getCustomerChatId();
-    const db = getChatsDB();
-    const chat = db[id] || { messages: [] };
+
+  async function refreshCustomerChatUI() {
+    const chat = await fetchCustomerChat();
     const container = document.getElementById('customerChatMessages');
     if (!container) return;
     container.innerHTML = '';
-    chat.messages.forEach(m => {
+    (chat.messages || []).forEach(m => {
       const div = document.createElement('div');
       div.className = `message-bubble ${m.sender === 'admin' ? 'admin-msg' : 'customer-msg'}`;
-      div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="small-meta">${m.sender === 'admin' ? 'Support' : (chat.name || currentUser?.username || 'You')} • ${m.time}</div>`;
+      const label = m.sender === 'admin' ? 'Support' : (chat.name || currentUser?.username || 'You');
+      const time = m.time || (m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : '');
+      div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="small-meta">${escapeHtml(label)} • ${escapeHtml(time)}</div>`;
       container.appendChild(div);
     });
+    if (!(chat.messages || []).length) {
+      container.innerHTML = '<div class="small-meta">No messages yet. Write your first message below.</div>';
+    }
     container.scrollTop = container.scrollHeight;
   }
-  function refreshAdminChatUI() {
+
+  async function refreshAdminChatUI() {
     if (!isAdminLoggedIn()) return;
-    const db = getChatsDB();
     const listDiv = document.getElementById('chatList');
-    if (listDiv) {
-      listDiv.innerHTML = '';
-      Object.keys(db).forEach(id => {
-        const c = db[id];
-        const preview = c.messages.length ? c.messages[c.messages.length - 1].text.slice(0, 40) : '...';
-        const item = document.createElement('div');
-        item.className = `chat-list-item ${selectedAdminChatId === id ? 'active' : ''}`;
-        item.innerHTML = `<strong>${escapeHtml(c.name || '?')}</strong><br><small>${escapeHtml(c.email || 'no email')}</small><br><small>${escapeHtml(preview)}</small>`;
-        item.onclick = () => { selectedAdminChatId = id; refreshAdminChatUI(); };
-        listDiv.appendChild(item);
-      });
-      if (!Object.keys(db).length) listDiv.innerHTML = '<p>No chats yet.</p>';
-    }
     const threadDiv = document.getElementById('adminChatThread');
-    if (selectedAdminChatId && db[selectedAdminChatId]) {
-      const chat = db[selectedAdminChatId];
-      threadDiv.innerHTML = '';
-      chat.messages.forEach(m => {
-        const div = document.createElement('div');
-        div.className = `message-bubble ${m.sender === 'admin' ? 'admin-msg' : 'customer-msg'}`;
-        div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="small-meta">${m.sender === 'admin' ? 'Admin' : (chat.name || 'Customer')} • ${m.time}</div>`;
-        threadDiv.appendChild(div);
-      });
-      threadDiv.scrollTop = threadDiv.scrollHeight;
-    } else if (threadDiv) {
-      threadDiv.innerHTML = '<div>Select a chat</div>';
+    try {
+      const data = await api('/api/admin/chats', { headers: authHeaders() });
+      const chats = data.chats || [];
+      if (listDiv) {
+        listDiv.innerHTML = '';
+        chats.forEach(c => {
+          const preview = (c.messages && c.messages.length) ? c.messages[c.messages.length - 1].text.slice(0, 40) : '...';
+          const item = document.createElement('div');
+          item.className = `chat-list-item ${selectedAdminChatId === c.id ? 'active' : ''}`;
+          item.innerHTML = `<strong>${escapeHtml(c.name || '?')}</strong><br><small>${escapeHtml(c.email || 'no email')}</small><br><small>${escapeHtml(preview)}</small>`;
+          item.onclick = async () => { selectedAdminChatId = c.id; await refreshAdminChatUI(); };
+          listDiv.appendChild(item);
+        });
+        if (!chats.length) listDiv.innerHTML = '<p>No chats yet.</p>';
+      }
+
+      if (!selectedAdminChatId && chats.length) selectedAdminChatId = chats[0].id;
+      const chat = chats.find(c => c.id === selectedAdminChatId);
+      if (threadDiv && chat) {
+        threadDiv.innerHTML = '';
+        (chat.messages || []).forEach(m => {
+          const div = document.createElement('div');
+          div.className = `message-bubble ${m.sender === 'admin' ? 'admin-msg' : 'customer-msg'}`;
+          const label = m.sender === 'admin' ? 'Admin' : (chat.name || 'Customer');
+          const time = m.time || (m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : '');
+          div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="small-meta">${escapeHtml(label)} • ${escapeHtml(time)}</div>`;
+          threadDiv.appendChild(div);
+        });
+        threadDiv.scrollTop = threadDiv.scrollHeight;
+      } else if (threadDiv) {
+        threadDiv.innerHTML = '<div>Select a chat</div>';
+      }
+    } catch (err) {
+      if (threadDiv) threadDiv.innerHTML = `<div>${escapeHtml(err.message)}</div>`;
     }
   }
-  function sendCustomerMessage() {
+
+  async function sendCustomerMessage() {
     if (!currentUser) return;
     const chatId = getCustomerChatId();
-    setCustomerInfo(chatId, currentUser.email, currentUser.username);
     const input = document.getElementById('customerMsgInput');
     const msg = input.value.trim();
     if (msg) {
-      addMessage(chatId, msg, 'customer');
       input.value = '';
+      await addMessage(chatId, msg, 'customer');
     }
   }
-  function openChatOverlay() {
+
+  async function openChatOverlay() {
     if (!currentUser) return;
     document.getElementById('chatOverlay').style.display = 'flex';
-    refreshCustomerChatUI();
+    await refreshCustomerChatUI();
   }
 
   function showPage(pageId) {
@@ -1172,13 +1215,13 @@
     const input = document.getElementById('adminReplyInput');
     const msg = input.value.trim();
     if (msg) {
-      addMessage(selectedAdminChatId, msg, 'admin');
       input.value = '';
+      addMessage(selectedAdminChatId, msg, 'admin');
     }
   });
   setInterval(() => {
     if (document.getElementById('chatOverlay')?.style.display === 'flex') refreshCustomerChatUI();
-    if (isAdminLoggedIn()) refreshAdminChatUI();
+    if (isAdminLoggedIn() && document.getElementById('page-chats')?.classList.contains('active')) refreshAdminChatUI();
   }, 2000);
 
   async function boot() {
