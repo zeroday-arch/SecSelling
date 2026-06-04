@@ -1128,6 +1128,108 @@
     return users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
   }
 
+
+
+  function setDefaultBulkEndDate() {
+    const input = document.getElementById('bulkDiscountEndDate');
+    if (!input || input.value) return;
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    input.value = d.toISOString().slice(0, 16);
+  }
+
+  function updateBulkDiscountPreview() {
+    const preview = document.getElementById('bulkDiscountPreview');
+    if (!preview) return;
+    const percent = Number(document.getElementById('bulkDiscountPercent')?.value || 0);
+    if (!Number.isFinite(percent) || percent <= 0 || percent >= 100) {
+      preview.textContent = 'Enter a discount between 1 and 99 percent.';
+      return;
+    }
+    const samples = basePackages.slice(0, 5).map(pkg => {
+      const newPrice = Math.max(0.01, Math.round((pkg.price * (1 - percent / 100)) * 100) / 100);
+      return `${pkg.mil}M: ${formatMoney(pkg.price)}€ → ${formatMoney(newPrice)}€`;
+    });
+    preview.innerHTML = `<strong>Preview:</strong><br>${samples.join('<br>')}<br><span class="status-line">This will update every package.</span>`;
+  }
+
+  async function applyBulkDiscount() {
+    const status = document.getElementById('bulkDiscountStatus');
+    const btn = document.getElementById('applyBulkDiscountBtn');
+    const percent = Number(document.getElementById('bulkDiscountPercent')?.value || 0);
+    const description = document.getElementById('bulkDiscountDesc')?.value.trim() || `${percent}% OFF`;
+    const endDate = document.getElementById('bulkDiscountEndDate')?.value || '';
+
+    if (status) status.textContent = '';
+    if (!isAdminLoggedIn()) {
+      if (status) status.textContent = 'You must be logged in as admin first.';
+      alert('Admin login required.');
+      return;
+    }
+    if (!Number.isFinite(percent) || percent < 1 || percent > 99) {
+      if (status) status.textContent = 'Discount must be between 1 and 99.';
+      alert('Discount must be between 1 and 99.');
+      return;
+    }
+    if (!endDate) {
+      if (status) status.textContent = 'Choose an end date first.';
+      alert('Choose an end date first.');
+      return;
+    }
+
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = 'Applying...'; }
+      const data = await api('/api/admin/offers/bulk-discount', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ discountPercent: percent, description, endDate })
+      });
+      offers = data.offers || offers;
+      announcements = data.announcements || announcements;
+      inventory = data.inventory || inventory;
+      renderAccounts();
+      updateBulkDiscountPreview();
+      if (status) status.textContent = `Applied ${percent}% discount to all packages.`;
+      alert(`Applied ${percent}% discount to all packages.`);
+    } catch (err) {
+      console.error(err);
+      if (status) status.textContent = `Error: ${err.message}`;
+      alert(`Bulk discount failed: ${err.message}`);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Apply discount to all packages'; }
+    }
+  }
+
+  async function clearAllSales() {
+    const status = document.getElementById('bulkDiscountStatus');
+    const btn = document.getElementById('clearAllSalesBtn');
+    if (!isAdminLoggedIn()) {
+      alert('Admin login required.');
+      return;
+    }
+    if (!confirm('Remove all active sales from every package?')) return;
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = 'Removing...'; }
+      const data = await api('/api/admin/offers', {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      offers = data.offers || {};
+      announcements = data.announcements || announcements;
+      inventory = data.inventory || inventory;
+      renderAccounts();
+      if (status) status.textContent = 'All sales removed.';
+      alert('All sales removed.');
+    } catch (err) {
+      console.error(err);
+      if (status) status.textContent = `Error: ${err.message}`;
+      alert(`Could not remove sales: ${err.message}`);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Remove all sales'; }
+    }
+  }
+
   async function tryAdminLogin(email, password) {
     const data = await api('/api/admin/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password })
