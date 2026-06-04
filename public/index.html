@@ -167,6 +167,10 @@
     .low-stock { background: #aa2e4e; color: white; }
     .edit-price-icon { position: absolute; right: -25px; top: 2px; cursor: pointer; font-size: 0.9rem; color: #aaa; display: none; }
     .admin-mode .edit-price-icon { display: inline-block; }
+    .admin-only { display: none; }
+    .admin-mode .admin-only { display: block; }
+    .bulk-discount-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-top:1rem; }
+    .bulk-preview { background:#0f112e; border:1px solid rgba(255,255,255,0.12); border-radius:1rem; padding:0.75rem; font-size:0.9rem; }
     .wait-badge { font-size: 0.7rem; background: #2a2660; display: inline-block; padding: 0.2rem 0.7rem; border-radius: 30px; margin-top: 0.3rem; color: #ffda9e; }
     .select-badge { font-size: 0.75rem; background: #352f70; display: inline-block; padding: 0.2rem 1rem; border-radius: 30px; margin-top: 0.5rem; }
     .sale-badge { position: absolute; top: 8px; right: 8px; background: #ff5722; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
@@ -288,6 +292,32 @@
   <div id="page-accounts" class="page">
     <h2><i class="fas fa-coins"></i> Available Cash Packages</h2>
     <div class="accounts-grid" id="accountsGrid"></div>
+
+    <div id="bulkDiscountCard" class="glass-card admin-only" style="margin:1.25rem 0;">
+      <h3><i class="fas fa-percent"></i> Admin Bulk Discount</h3>
+      <p class="status-line">Apply one discount percentage to every package at once. Example: 75% means every sale price becomes 25% of the normal price.</p>
+      <div class="bulk-discount-grid">
+        <div>
+          <label>Discount percentage</label>
+          <input type="number" id="bulkDiscountPercent" min="1" max="99" value="75" placeholder="75">
+        </div>
+        <div>
+          <label>Sale description</label>
+          <input type="text" id="bulkDiscountDesc" value="75% OFF Flash Sale" placeholder="Flash Sale">
+        </div>
+        <div>
+          <label>Sale ends at</label>
+          <input type="datetime-local" id="bulkDiscountEndDate">
+        </div>
+      </div>
+      <div class="bulk-preview" id="bulkDiscountPreview" style="margin-top:0.75rem;">Preview will appear here.</div>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+        <button id="applyBulkDiscountBtn" class="btn btn-accent">Apply discount to all packages</button>
+        <button id="clearAllSalesBtn" class="btn btn-danger">Remove all sales</button>
+      </div>
+      <p id="bulkDiscountStatus" class="status-line"></p>
+    </div>
+
     <div class="order-card">
       <h3>Order & Payment</h3>
       <div id="selectedPackageDisplay" style="background:#262b55; padding:0.8rem; border-radius:1.2rem; margin:1rem 0;"></div>
@@ -512,6 +542,7 @@
     if (chatsNavItem) chatsNavItem.style.display = adminVisible ? 'block' : 'none';
     if (adminAnnouncementNav) adminAnnouncementNav.style.display = adminVisible ? 'block' : 'none';
     document.body.classList.toggle('admin-mode', adminVisible);
+    document.querySelectorAll('.admin-only').forEach(el => { el.style.display = adminVisible ? 'block' : 'none'; });
 
     const activePage = document.querySelector('.page.active');
     if (!adminVisible && activePage && (activePage.id === 'page-chats' || activePage.id === 'page-adminAnnouncements')) {
@@ -698,7 +729,7 @@
 
   function updateCountdowns() {
     document.querySelectorAll('.countdown[data-end]').forEach(el => {
-      el.textContent = `⏳ ${timeLeftText(el.dataset.end)}`;
+      el.textContent = `⏳ Flash Sale ends in: ${timeLeftText(el.dataset.end)}`;
     });
   }
 
@@ -1080,7 +1111,7 @@
     document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
     const activeLink = document.querySelector(`.nav-links a[data-page="${pageId}"]`);
     if (activeLink) activeLink.classList.add('active');
-    if (pageId === 'accounts') renderAccounts();
+    if (pageId === 'accounts') { renderAccounts(); setDefaultBulkEndDate(); updateBulkDiscountPreview(); }
     if (pageId === 'myOrders') renderMyOrders();
     if (pageId === 'reviews') renderReviews();
     if (pageId === 'chats' && isAdminLoggedIn()) { refreshAdminChatUI(); renderOrdersList(); updateAdminBadge(false); }
@@ -1188,6 +1219,9 @@
   document.getElementById('saveOfferEdit')?.addEventListener('click', () => saveOfferEdit(false));
   document.getElementById('deleteOfferEdit')?.addEventListener('click', () => saveOfferEdit(true));
   document.getElementById('cancelOfferEdit')?.addEventListener('click', () => { document.getElementById('editOfferModal').style.display = 'none'; });
+  document.getElementById('bulkDiscountPercent')?.addEventListener('input', updateBulkDiscountPreview);
+  document.getElementById('applyBulkDiscountBtn')?.addEventListener('click', applyBulkDiscount);
+  document.getElementById('clearAllSalesBtn')?.addEventListener('click', clearAllSales);
   document.getElementById('newAnnouncementBtn')?.addEventListener('click', () => {
     announcements.push({ text: 'New announcement', endDate: '2099-12-31T23:59' });
     renderAdminAnnouncements();

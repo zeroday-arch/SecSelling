@@ -20,6 +20,7 @@ app.use(express.json({ limit: '250kb' }));
 app.use(express.static(PUBLIC_DIR));
 
 const baseMils = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
+const basePrices = { 5: 3, 10: 5, 15: 15, 20: 20, 25: 25, 30: 30, 35: 40, 40: 50, 45: 60, 50: 70, 55: 80, 60: 90, 65: 100, 70: 110, 75: 120, 80: 130, 85: 140, 90: 150, 95: 160, 100: 170 };
 
 function defaultDb() {
   const inventory = {};
@@ -242,6 +243,41 @@ app.post('/api/admin/login', async (req, res) => {
 
 app.get('/api/admin/me', requireAdmin, (req, res) => {
   res.json({ email: ADMIN_EMAIL, username: 'Owner', role: 'admin' });
+});
+
+
+app.post('/api/admin/offers/bulk-discount', requireAdmin, async (req, res) => {
+  const discountPercent = Number(req.body.discountPercent);
+  const description = String(req.body.description || '').trim().slice(0, 80);
+  const endDate = String(req.body.endDate || '').trim();
+
+  if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 99) {
+    return res.status(400).json({ error: 'Discount must be between 1 and 99 percent' });
+  }
+  if (!endDate || Number.isNaN(new Date(endDate).getTime())) {
+    return res.status(400).json({ error: 'Valid end date is required' });
+  }
+
+  const db = await readDb();
+  baseMils.forEach(mil => {
+    const original = Number(basePrices[mil]);
+    const salePrice = Math.max(0.01, Math.round((original * (1 - discountPercent / 100)) * 100) / 100);
+    db.offers[String(mil)] = {
+      salePrice,
+      description: description || `${discountPercent}% OFF`,
+      endDate
+    };
+  });
+
+  await writeDb(db);
+  res.json(publicSiteData(db));
+});
+
+app.delete('/api/admin/offers', requireAdmin, async (req, res) => {
+  const db = await readDb();
+  db.offers = {};
+  await writeDb(db);
+  res.json(publicSiteData(db));
 });
 
 app.put('/api/admin/offers/:mil', requireAdmin, async (req, res) => {
